@@ -51,6 +51,7 @@ class RandomResource extends ResourceBase {
 	}
 	public void handleGET(CoapExchange exchange) {
 		String number = exchange.getRequestOptions().getURIQueryString();
+		System.out.println(number);
 		System.out.println(exchange.getRequestOptions().asSortedList());
 		List<Option> optionList = exchange.getRequestOptions().asSortedList();
 		//List<Integer> serverOptions = ArrayList<Integer>();
