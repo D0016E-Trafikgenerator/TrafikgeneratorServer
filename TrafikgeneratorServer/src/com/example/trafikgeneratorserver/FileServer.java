@@ -94,6 +94,35 @@ class DummyResource extends ResourceBase {
 	
 	public void handlePOST(CoapExchange exchange) {
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
+		int size = exchange.getRequestOptions().asSortedList().get(3).getIntegerValue();
+		int payloadSize = size;
+		String number = exchange.getRequestOptions().getURIQueryString();
+		
+		//tar ut datat från payloaden		
+		byte[] payloadData = new byte[payloadSize];
+		payloadData = exchange.getRequestPayload();		
+		
+		
+		//genererar slumpdata som förhoppningsvis ska stämma med den mottagna slumpdatan
+		Long seed = Long.parseLong(number);
+		Random rnd = new Random(seed);
+		byte[] dummyData = new byte[size];
+		rnd.nextBytes(dummyData);
+		
+		if (payloadData.equals(dummyData)){
+			//sänd tillbaka något som visar att det var okej
+			System.out.println("Egengenererat data stämmer med mottaget!");
+			exchange.respond(ResponseCode.VALID);
+		}
+		else{
+			//sänd tillbaka något som skriker att det var fel
+			System.out.println("Egengenererat data är inte samma som mottaget data!");
+			exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+			//Trots responskoden behöver förstås inte fel ligga i serverdelen, korrupt data eller annat högteknologist jävulskap kan ju göra sådant
+			
+		}
+		
+		
 		
 	}
 	public void handleDELETE(CoapExchange exchange) {
