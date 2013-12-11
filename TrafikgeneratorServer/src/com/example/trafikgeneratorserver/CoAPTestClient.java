@@ -2,6 +2,7 @@ package com.example.trafikgeneratorserver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.DatagramPacket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -53,6 +54,7 @@ public class CoAPTestClient {
 					System.out.print("FRAMGÅNG! VI FICK TILLBAKA RÄTT SEKVENS! UTDRAG: [");
 					System.out.println((new String(sentDummyData, Charset.forName("ISO-8859-1"))).substring(0, 9) + "]");
 				}
+				
 			}
 		}
 		else if (typ == 0) {
