@@ -1,5 +1,7 @@
 package com.example.trafikgeneratorserver;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executors;
+import javax.swing.Timer;
 
 import ch.ethz.inf.vs.californium.coap.CoAP.ResponseCode;
 import ch.ethz.inf.vs.californium.coap.Option;
@@ -19,7 +22,8 @@ import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
 import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 
 public class FileServer {
-	//main-metod, Frans idé
+	
+	private static long startTime;
 	public static void main(String[] args)
 	{
 		NetworkConfig nwSettings = new NetworkConfig();		
@@ -51,18 +55,29 @@ public class FileServer {
 	*/
 	public static void rxServer(Map<String, Option> args, InetAddress ip){
 		NetworkConfig nwSettings = nwSetup(args);
-		Server självaServern = new Server(nwSettings);
+		final Server självaServern = new Server(nwSettings);
 		självaServern.setExecutor(Executors.newScheduledThreadPool(4));
 			
 		//args to resource constructor is name of resource + senders IP
 		//IP kan man få från själva CoAP-exchange, men den kan ju vara lite jobbig att få _här_
 		//Kanske bättre att använda någon annanstans?
 		
+		startTime = System.nanoTime();
+		
 		DummyResource dummyResource = new DummyResource("dummydata",ip);
 		FileServerResource fileServerResource = new FileServerResource("fileserver", ip);
 		självaServern.add(dummyResource);
 		självaServern.add(fileServerResource);//fileServerResource är ej gjord ännu.
 		självaServern.start();
+		
+		Timer timer = new Timer(30000, new ActionListener() {
+			  @Override
+			  public void actionPerformed(ActionEvent arg0) {
+			    självaServern.stop();
+			  }
+			});
+		timer.setRepeats(false); // Only execute once
+		timer.start(); // Go go go!
 	}
 	
 	
@@ -126,8 +141,7 @@ class DummyResource extends ResourceBase {
 		} else {
 			exchange.respond(ResponseCode.UNAUTHORIZED);
 		}
-	}
-	
+	}	
 	public void handlePOST(CoapExchange exchange) {
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
 		int size = exchange.getRequestOptions().asSortedList().get(3).getIntegerValue();
