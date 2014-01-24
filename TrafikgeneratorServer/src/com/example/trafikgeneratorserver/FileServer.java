@@ -2,10 +2,13 @@ package com.example.trafikgeneratorserver;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,27 +18,29 @@ import javax.swing.Timer;
 
 import ch.ethz.inf.vs.californium.coap.CoAP.ResponseCode;
 import ch.ethz.inf.vs.californium.coap.Option;
+import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.network.config.NetworkConfig;
 import ch.ethz.inf.vs.californium.network.config.NetworkConfigDefaults;
 import ch.ethz.inf.vs.californium.server.Server;
 import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
 import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
-
+import java.util.Observable;
+import java.util.Observer;
 public class FileServer {
 	
 	private static long startTime;
 	public static void main(String[] args)
 	{
 		NetworkConfig nwSettings = new NetworkConfig();		
-		Server självaServern = new Server(nwSettings);
-		självaServern.setExecutor(Executors.newScheduledThreadPool(4));
+		Server mainServer = new Server(nwSettings);
+		mainServer.setExecutor(Executors.newScheduledThreadPool(4));
 		//Resurs självaResursen = new Resurs("backwards");//Här och nedanför bör kanske istället lyssningsresursen skapas och läggas till 
 		//RandomResource slumpen = new RandomResource("random");
 		//självaServern.add(självaResursen);
 		//självaServern.add(slumpen);
-		ListeningResource listener = new ListeningResource("lyssnare");
-		självaServern.add(listener);
-		självaServern.start();
+		ListeningResource listener = new ListeningResource("control");
+		mainServer.add(listener);
+		mainServer.start();
 }
 	/*//Den ursprungliga main-metoden, före Frans lade sina flottiga fingrar på den
 	public static void main(Map<String, Option> args)//ska main ta våra customfunktioner verkligen?
@@ -53,10 +58,10 @@ public class FileServer {
 		självaServern.start();
 	}
 	*/
-	public static void rxServer(Map<String, Option> args, InetAddress ip){
+	public static void rxServer(Map<String, Option> args, InetAddress ip) {
 		NetworkConfig nwSettings = nwSetup(args);
-		final Server självaServern = new Server(nwSettings);
-		självaServern.setExecutor(Executors.newScheduledThreadPool(4));
+		final Server testServer = new Server(nwSettings);
+		testServer.setExecutor(Executors.newScheduledThreadPool(4));
 			
 		//args to resource constructor is name of resource + senders IP
 		//IP kan man få från själva CoAP-exchange, men den kan ju vara lite jobbig att få _här_
@@ -66,18 +71,15 @@ public class FileServer {
 		
 		DummyResource dummyResource = new DummyResource("dummydata",ip);
 		FileServerResource fileServerResource = new FileServerResource("fileserver", ip);
-		självaServern.add(dummyResource);
-		självaServern.add(fileServerResource);//fileServerResource är ej gjord ännu.
-		självaServern.start();
+		testServer.add(dummyResource);
+		testServer.add(fileServerResource);//fileServerResource är ej gjord ännu.
+		testServer.start();
+		try {
+			testServer.wait();
+		} catch (InterruptedException e) {
+			testServer.stop();
+		}
 		
-		Timer timer = new Timer(30000, new ActionListener() {
-			  @Override
-			  public void actionPerformed(ActionEvent arg0) {
-			    självaServern.stop();
-			  }
-			});
-		timer.setRepeats(false); // Only execute once
-		timer.start(); // Go go go!
 	}
 	
 	
@@ -114,12 +116,13 @@ public class FileServer {
 		return nwSettings;
 	}
 
+
 }
 //>olika klasser i samma javafil
 /*
  * Dummydataresurs
  */
-class DummyResource extends ResourceBase {
+class DummyResource extends ResourceBase  {
 	private InetAddress senderIP;
 	public DummyResource(String name, InetAddress ip) {
 		super(name);
@@ -127,6 +130,7 @@ class DummyResource extends ResourceBase {
 		// TODO Auto-generated constructor stub
 	}
 	public void handleGET(CoapExchange exchange) {
+		//används när server blir client?
 		//generera slumpdata med seed ?xxxxx(skickas från klient), som en byte[size](definierad som option#3),
 		//skicka tillbaka denna data
 		if(this.senderIP.equals(exchange.getSourceAddress())){
@@ -143,6 +147,16 @@ class DummyResource extends ResourceBase {
 		}
 	}	
 	public void handlePOST(CoapExchange exchange) {
+		//STOP code has been sent from client
+		if(exchange.getRequestOptions().hasOption(65009)){
+			exchange.respond(ResponseCode.DELETED); //The server is deleted
+			exchange.notify();						//Hopefully notifies rxServer so that is stops waiting and stops the service
+		}
+		
+		
+		
+		
+		/*
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
 		int size = exchange.getRequestOptions().asSortedList().get(3).getIntegerValue();
 		int payloadSize = size;
@@ -150,9 +164,11 @@ class DummyResource extends ResourceBase {
 		
 		//tar ut datat från payloaden		
 		byte[] payloadData = new byte[payloadSize];
-		payloadData = exchange.getRequestPayload();		
+		payloadData = exchange.getRequestPayload();
+		*/
 		
-		//genererar slumpdata som förhoppningsvis ska stämma med den mottagna slumpdatan
+		
+		/*//genererar slumpdata som förhoppningsvis ska stämma med den mottagna slumpdatan
 		Long seed = Long.parseLong(number);
 		Random rnd = new Random(seed);
 		byte[] dummyData = new byte[size];
@@ -163,6 +179,7 @@ class DummyResource extends ResourceBase {
 		System.out.println((new String(payloadData, Charset.forName("ISO-8859-1"))) + "]");
 		
 		
+		//Ta bort check av dummydata
 		if (Arrays.equals(payloadData, dummyData)){
 			//sänd tillbaka något som visar att det var okej
 			System.out.println("Egengenererat data stämmer med mottaget!");
@@ -173,7 +190,9 @@ class DummyResource extends ResourceBase {
 			System.out.println("Egengenererat data är inte samma som mottaget data!");
 			exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 		//Trots responskoden behöver förstås inte fel ligga i serverdelen, korrupt data eller annat högteknologist jävulskap kan ju göra sådant
-		}
+		}*/
+		
+		//Hantera STOP - stäng ner servern
 		
 		
 		
@@ -213,7 +232,7 @@ class FileServerResource extends ResourceBase {
  * lyssnarresurs
  */
 
-class ListeningResource extends ResourceBase {
+class ListeningResource extends ResourceBase  {
 	public ListeningResource(String name) {
 		super(name);
 		// TODO Auto-generated constructor stub
@@ -224,46 +243,62 @@ class ListeningResource extends ResourceBase {
 	 */
 
 	public void handlePOST(CoapExchange exchange) {
-		String number = exchange.getRequestOptions().getURIQueryString();
-		//System.out.println(exchange.getRequestOptions().asSortedList().get(3).getNumber());
-		List<Option> optionList = exchange.getRequestOptions().asSortedList();
-		Map<String, Option> startOptions = new HashMap<String, Option>(); 
-		
-		//FIXA SÅ ATT DET SER UT SÅHÄR!
-		//exchange.getRequestOptions().hasOption(65000)
-		
-		for(int x = 0;x < optionList.size();x++){
-			switch(optionList.get(x).getNumber()){
-			case 123:	startOptions.put("TEST", optionList.get(x));
-						
-						break;
-			case 65000: startOptions.put("PORT", optionList.get(x));
-						System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
-						break;
-			//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
-			//			break;
-			case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
-			System.out.println("ACK_TIMEOUT set");
-						break;
-			case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
-			System.out.println("ACK_RANDOM_FACTOR set");
-						break;
-			case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
-			System.out.println("MAX_RETRANSMIT set");
-						break;
-			case 65005: startOptions.put("NSTART", optionList.get(x));
-						break;
-			case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
-						System.out.println("PROBING_RATE set");
-						break;
-			default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
-						break;
+		//If START code has not been sent
+		if(!exchange.getRequestOptions().hasOption(65008)){
+			
+		} else {
+			String number = exchange.getRequestOptions().getURIQueryString();
+			//System.out.println(exchange.getRequestOptions().asSortedList().get(3).getNumber());
+			List<Option> optionList = exchange.getRequestOptions().asSortedList();
+			Map<String, Option> startOptions = new HashMap<String, Option>(); 
+			
+			//FIXA SÅ ATT DET SER UT SÅHÄR!
+			//exchange.getRequestOptions().hasOption(65000)
+			for(int x = 0;x < optionList.size();x++){
+				switch(optionList.get(x).getNumber()){
+				case 123:	startOptions.put("TEST", optionList.get(x));
+							
+							break;
+				case 65000: startOptions.put("PORT", optionList.get(x));
+							System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
+							break;
+				//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
+				//			break;
+				case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
+				System.out.println("ACK_TIMEOUT set");
+							break;
+				case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
+				System.out.println("ACK_RANDOM_FACTOR set");
+							break;
+				case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
+				System.out.println("MAX_RETRANSMIT set");
+							break;
+				case 65005: startOptions.put("NSTART", optionList.get(x));
+							break;
+				case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
+							System.out.println("PROBING_RATE set");
+							break;
+				default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
+							break;
+				}
 			}
-		}
-		InetAddress ip = exchange.getSourceAddress();
-		FileServer.rxServer(startOptions, ip);
-		
-		exchange.respond(ResponseCode.CREATED);
+			InetAddress ip = exchange.getSourceAddress();
+			FileServer.rxServer(startOptions, ip);
+			exchange.respond(ResponseCode.CREATED);
+			FileHandler fh = new FileHandler();
+			
+			Date date = new Date();
+			SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
+			String formatedDate = format.format(date);
+			
+			
+			try {
+				fh.create(formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}	
 		//Below should be commented out, it just returns somr dummydata to the sender
 		/*
 		Long seed = Long.parseLong(number);
@@ -274,4 +309,5 @@ class ListeningResource extends ResourceBase {
 		exchange.respond(ResponseCode.CONTENT, dummyData);
 		*/
 	}
+
 }
