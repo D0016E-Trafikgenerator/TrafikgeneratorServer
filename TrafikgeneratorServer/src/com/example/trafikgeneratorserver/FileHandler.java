@@ -17,6 +17,7 @@ public class FileHandler {
 	static Path defaultPath = Paths.get("C:\\CoAPFileServer\\");
 	static String testFile = "log1.txt";
 	static String testInsertion = "1 hej\n10000000 prutt\n";
+	Path logName;
 	/**
 	 * @param args
 	 * @throws FileNotFoundException 
@@ -28,10 +29,10 @@ public class FileHandler {
 		//Not prioratized
 	}
 	void create(String fileName) throws IOException { 
-		Path path = Paths.get(defaultPath + "\\" + fileName);
-		Files.createDirectories(path.getParent());
+		Path logName = Paths.get(defaultPath + "\\" + fileName);
+		Files.createDirectories(logName.getParent());
 		try {
-			Files.createFile(path);
+			Files.createFile(logName);
 		} catch (FileAlreadyExistsException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -39,36 +40,29 @@ public class FileHandler {
 		
 	}
 	
-	/*private String save(String fileName, String content) throws FileNotFoundException{
-		BufferedReader br = new BufferedReader(content);
-		try {
-			ArrayList<String> sb = new ArrayList<String>();
-		    String line = br.readLine();
-
-		    while (line != null) {
-
-		    	sb.append(line);
-		        sb.append('\n');
-		        line = br.readLine();
-		    }
-		        String everything = sb.toString();
-		    } finally {
-		        br.close();
-		    }
-	}*/
-	
-	void saveTo(String fileName, String content) throws FileNotFoundException{
-
-		
+	void add(String content) throws FileNotFoundException{
 		StringList sl = new StringList();
-		sl.read(defaultPath.toString() +"\\"+ fileName);
+		sl.read(logName.toString());
+		
+		String [] items = content.split("\n");
+		ArrayList<String> sb = new ArrayList<String>(Arrays.asList(items));
+		
+		for(int i = 0; i < sb.size(); i++){
+			sl.add(sb.get(i));
+		}
+		sl.save(logName.toString());
+	}
+	
+	void merge(String fileName, String content) throws FileNotFoundException{
+
+		StringList sl = new StringList();
+		sl.read(logName.toString());
 		
 		//ArrayList<String> insertions = new ArrayList<String>();
 		
 		//BufferedReader br = new BufferedReader( new FileReader(content));
 		//List<String> sb = Lists.newArrayList(Splitter.on("\n").split(content));
 		String [] items = content.split("\n");
-		
 		ArrayList<String> sb = new ArrayList<String>(Arrays.asList(items));
 		
 		//Collection.addAll(sb, items);

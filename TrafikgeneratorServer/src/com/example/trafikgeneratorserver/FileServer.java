@@ -2,6 +2,7 @@ package com.example.trafikgeneratorserver;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -58,7 +59,7 @@ public class FileServer {
 		självaServern.start();
 	}
 	*/
-	public static void rxServer(Map<String, Option> args, InetAddress ip) {
+	public static void rxServer(Map<String, Option> args, InetAddress ip, FileHandler fh) {
 		NetworkConfig nwSettings = nwSetup(args);
 		final Server testServer = new Server(nwSettings);
 		testServer.setExecutor(Executors.newScheduledThreadPool(4));
@@ -69,17 +70,19 @@ public class FileServer {
 		
 		startTime = System.nanoTime();
 		
-		DummyResource dummyResource = new DummyResource("dummydata",ip);
+		DummyResource dummyResource = new DummyResource("dummydata",ip, fh);
 		FileServerResource fileServerResource = new FileServerResource("fileserver", ip);
 		testServer.add(dummyResource);
 		testServer.add(fileServerResource);//fileServerResource är ej gjord ännu.
 		testServer.start();
-		try {
-			testServer.wait();
-		} catch (InterruptedException e) {
-			testServer.stop();
+		synchronized(dummyResource) {
+			try {
+				testServer.wait();
+			} catch (InterruptedException e) {
+				testServer.stop();
+			}
 		}
-		
+
 	}
 	
 	
@@ -124,12 +127,31 @@ public class FileServer {
  */
 class DummyResource extends ResourceBase  {
 	private InetAddress senderIP;
-	public DummyResource(String name, InetAddress ip) {
+	private FileHandler fh;
+	public DummyResource(String name, InetAddress ip, FileHandler FH) {
 		super(name);
 		senderIP = ip;
+		fh = FH;
 		// TODO Auto-generated constructor stub
 	}
-	public void handleGET(CoapExchange exchange) {
+	private void addToLog(String event, CoapExchange exchange){
+		//Save log 
+		String content;
+		String timeStamp = Long.toString(exchange.advanced().getCurrentResponse().getTimestamp());
+		String msgId = Integer.toString(exchange.advanced().getCurrentResponse().getMID());
+		String msgType = "";
+		String payloadSize = Integer.toString(exchange.advanced().getCurrentResponse().getPayloadSize());
+		
+		content = timeStamp + " ack for packet " + msgId  + " " + msgType + " " + payloadSize; 
+
+		try {
+			fh.add(content);
+		} catch (FileNotFoundException e) {
+			System.out.println("File Server ERROR: File not found!");
+			e.printStackTrace();
+		}
+	}
+ 	public void handleGET(CoapExchange exchange) {
 		//används när server blir client?
 		//generera slumpdata med seed ?xxxxx(skickas från klient), som en byte[size](definierad som option#3),
 		//skicka tillbaka denna data
@@ -147,15 +169,18 @@ class DummyResource extends ResourceBase  {
 		}
 	}	
 	public void handlePOST(CoapExchange exchange) {
+		
 		//STOP code has been sent from client
 		if(exchange.getRequestOptions().hasOption(65009)){
 			exchange.respond(ResponseCode.DELETED); //The server is deleted
 			exchange.notify();						//Hopefully notifies rxServer so that is stops waiting and stops the service
+			addToLog("STOP", exchange);
+			
+		} else {
+			//respond to client
+			exchange.respond(ResponseCode.VALID);
+			addToLog("ACK", exchange);
 		}
-		
-		
-		
-		
 		/*
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
 		int size = exchange.getRequestOptions().asSortedList().get(3).getIntegerValue();
@@ -210,6 +235,8 @@ class DummyResource extends ResourceBase  {
  * Filserverresurs
  */
 class FileServerResource extends ResourceBase {
+	private InetAddress senderIP;
+	private FileHandler fh;
 	public FileServerResource(String name, InetAddress ip) {
 		super(name);
 		InetAddress senderIP = ip;
@@ -282,22 +309,26 @@ class ListeningResource extends ResourceBase  {
 							break;
 				}
 			}
-			InetAddress ip = exchange.getSourceAddress();
-			FileServer.rxServer(startOptions, ip);
-			exchange.respond(ResponseCode.CREATED);
+			
 			FileHandler fh = new FileHandler();
 			
 			Date date = new Date();
 			SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
 			String formatedDate = format.format(date);
-			
+			String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
 			
 			try {
-				fh.create(formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server");
+				fh.create(logName);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			InetAddress ip = exchange.getSourceAddress();
+			FileServer.rxServer(startOptions, ip, fh);
+			exchange.respond(ResponseCode.CREATED);
+			
+			
 		}	
 		//Below should be commented out, it just returns somr dummydata to the sender
 		/*
