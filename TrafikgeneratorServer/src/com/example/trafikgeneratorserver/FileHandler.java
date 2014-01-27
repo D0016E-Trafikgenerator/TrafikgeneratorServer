@@ -53,42 +53,22 @@ public class FileHandler {
 		sl.save(logName.toString());
 	}
 	
-	void merge(String fileName, String content) throws FileNotFoundException{
+	void merge(String fileName, String clientLog, String serverLog) throws FileNotFoundException{
 
+		StringList clientLogList = new StringList();
+		clientLogList.read(defaultPath.toString() +"\\"+ clientLog);
+		StringList serverLogList = new StringList();
+		serverLogList.read(defaultPath.toString() +"\\"+ serverLog);
+		
 		StringList sl = new StringList();
-		sl.read(logName.toString());
-		
-		//ArrayList<String> insertions = new ArrayList<String>();
-		
-		//BufferedReader br = new BufferedReader( new FileReader(content));
-		//List<String> sb = Lists.newArrayList(Splitter.on("\n").split(content));
-		String [] items = content.split("\n");
-		ArrayList<String> sb = new ArrayList<String>(Arrays.asList(items));
-		
-		//Collection.addAll(sb, items);
-		/*try {
-			//StringBuilder sb = new StringBuilder();
-			ArrayList<String> sb = new ArrayList<String>();
-			String line = br.readLine();
-
-		    while (line != null) {
-
-		    	sb.add(line);
-		        //sb.append('\n');
-		        line = br.readLine();
-		    }
-		        //String everything = sb.toString();
-	    } finally {
-	        br.close();
-	    }*/
-		sl = mergeSort(sl,sb);
+		sl = mergeSort(clientLogList,serverLogList);
 		
 		sl.save(defaultPath.toString() +"\\"+ fileName);
 		
 		//return fileString;
 	}
 	
-	private static StringList mergeSort(StringList sl, ArrayList<String> insertions){
+	private static StringList mergeSort(StringList sl, StringList insertions){
 		//Merge two sorted 
 		int slCounter = 0;
 		int insertCounter = 0;
@@ -119,8 +99,7 @@ public class FileHandler {
 				sb.add(insertions.get(i));
 			}
 		}
-		sl = sb;
-		return sl;
+		return sb;
 	}
 }
 

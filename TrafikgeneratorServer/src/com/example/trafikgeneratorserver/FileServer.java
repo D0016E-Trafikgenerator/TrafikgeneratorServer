@@ -8,6 +8,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -75,13 +76,22 @@ public class FileServer {
 		testServer.add(dummyResource);
 		testServer.add(fileServerResource);//fileServerResource är ej gjord ännu.
 		testServer.start();
-		synchronized(dummyResource) {
+		
+		//Somehow make testServer stop when STOP has been sent from client.
+		/*synchronized(dummyResource) {
 			try {
 				testServer.wait();
 			} catch (InterruptedException e) {
-				testServer.stop();
+				synchronized(fileServerResource){
+					try {
+						testServer.wait();
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						testServer.stop();
+					}
+				}
 			}
-		}
+		}*/
 
 	}
 	
@@ -134,20 +144,28 @@ class DummyResource extends ResourceBase  {
 		fh = FH;
 		// TODO Auto-generated constructor stub
 	}
-	private void addToLog(String event, CoapExchange exchange){
+	private void addToLog(String msgType, CoapExchange exchange){
 		//Save log 
+		String event = "";
+
 		String content;
 		String timeStamp = Long.toString(exchange.advanced().getCurrentResponse().getTimestamp());
 		String msgId = Integer.toString(exchange.advanced().getCurrentResponse().getMID());
-		String msgType = "";
 		String payloadSize = Integer.toString(exchange.advanced().getCurrentResponse().getPayloadSize());
+		String code = exchange.advanced().getCurrentResponse().getCode().toString();
+		String token = exchange.advanced().getCurrentResponse().getTokenString();
 		
-		content = timeStamp + " ack for packet " + msgId  + " " + msgType + " " + payloadSize; 
+		switch(msgType){
+		case "ACK": event = "ACK_for_msgid_" + exchange.advanced().getCurrentRequest().getMID();
+		case "STOP": event = "STOP";
+		}
+		
+		content = timeStamp + " " + event + " " + msgId  + " " + msgType + " " + payloadSize + " " + code + " " + token; 
 
 		try {
 			fh.add(content);
 		} catch (FileNotFoundException e) {
-			System.out.println("File Server ERROR: File not found!");
+			System.out.println("File Server ERROR: Log file not found!");
 			e.printStackTrace();
 		}
 	}
@@ -274,60 +292,98 @@ class ListeningResource extends ResourceBase  {
 		if(!exchange.getRequestOptions().hasOption(65008)){
 			
 		} else {
-			String number = exchange.getRequestOptions().getURIQueryString();
-			//System.out.println(exchange.getRequestOptions().asSortedList().get(3).getNumber());
-			List<Option> optionList = exchange.getRequestOptions().asSortedList();
-			Map<String, Option> startOptions = new HashMap<String, Option>(); 
+			String URI = exchange.getRequestOptions().getURIQueryString();
+			String [] items = URI.split("=");
+			ArrayList<String> URIlist = new ArrayList<String>(Arrays.asList(items));
 			
-			//FIXA SÅ ATT DET SER UT SÅHÄR!
-			//exchange.getRequestOptions().hasOption(65000)
-			for(int x = 0;x < optionList.size();x++){
-				switch(optionList.get(x).getNumber()){
-				case 123:	startOptions.put("TEST", optionList.get(x));
-							
-							break;
-				case 65000: startOptions.put("PORT", optionList.get(x));
-							System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
-							break;
-				//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
-				//			break;
-				case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
-				System.out.println("ACK_TIMEOUT set");
-							break;
-				case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
-				System.out.println("ACK_RANDOM_FACTOR set");
-							break;
-				case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
-				System.out.println("MAX_RETRANSMIT set");
-							break;
-				case 65005: startOptions.put("NSTART", optionList.get(x));
-							break;
-				case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
-							System.out.println("PROBING_RATE set");
-							break;
-				default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
-							break;
+			//Test is finished, client sends log to be merged
+			if(URIlist.size()>0 && URIlist.get(0)=="token"){
+				FileHandler fh = new FileHandler();
+				Date date = new Date();
+				SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
+				String formatedDate = format.format(date);
+				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client";
+				String logNameServer = formatedDate + "\\" + URIlist.get(1) + "_server";
+				String logName = formatedDate + "\\" + URIlist.get(1);
+				
+				try {
+					fh.create(logNameClient);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					System.out.println("File Server Error: Unable to create client log file!");
+					e.printStackTrace();
 				}
-			}
-			
-			FileHandler fh = new FileHandler();
-			
-			Date date = new Date();
-			SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
-			String formatedDate = format.format(date);
-			String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
-			
-			try {
-				fh.create(logName);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			InetAddress ip = exchange.getSourceAddress();
-			FileServer.rxServer(startOptions, ip, fh);
-			exchange.respond(ResponseCode.CREATED);
-			
+				try {
+					fh.add(exchange.getRequestText());
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					System.out.println("File Server Error: Could not save payload to file");
+					e.printStackTrace();
+				}
+				try {
+					fh.merge(logName, logNameClient, logNameServer);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					System.out.println("File Server Error: Could not merge log files");
+					e.printStackTrace();
+				}
+				
+				
+				
+			} else {
+				List<Option> optionList = exchange.getRequestOptions().asSortedList();
+				Map<String, Option> startOptions = new HashMap<String, Option>(); 
+				
+				//FIXA SÅ ATT DET SER UT SÅHÄR!
+				//exchange.getRequestOptions().hasOption(65000)
+				for(int x = 0;x < optionList.size();x++){
+					switch(optionList.get(x).getNumber()){
+					case 123:	startOptions.put("TEST", optionList.get(x));
+								
+								break;
+					case 65000: startOptions.put("PORT", optionList.get(x));
+								System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
+								break;
+					//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
+					//			break;
+					case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
+					System.out.println("ACK_TIMEOUT set");
+								break;
+					case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
+					System.out.println("ACK_RANDOM_FACTOR set");
+								break;
+					case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
+					System.out.println("MAX_RETRANSMIT set");
+								break;
+					case 65005: startOptions.put("NSTART", optionList.get(x));
+								break;
+					case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
+								System.out.println("PROBING_RATE set");
+								break;
+					default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
+								break;
+					}
+				}
+				
+				FileHandler fh = new FileHandler();
+				
+				Date date = new Date();
+				SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
+				String formatedDate = format.format(date);
+				String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
+				
+				try {
+					fh.create(logName);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					System.out.println("File Server Error: Unable to create file!");
+					e.printStackTrace();
+				}
+				
+				InetAddress ip = exchange.getSourceAddress();
+				FileServer.rxServer(startOptions, ip, fh);
+				exchange.respond(ResponseCode.CREATED);
+			}	
 			
 		}	
 		//Below should be commented out, it just returns somr dummydata to the sender
@@ -342,3 +398,4 @@ class ListeningResource extends ResourceBase  {
 	}
 
 }
+
