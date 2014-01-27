@@ -291,7 +291,58 @@ class ListeningResource extends ResourceBase  {
 	public void handlePOST(CoapExchange exchange) {
 		//If START code has not been sent
 		if(!exchange.getRequestOptions().hasOption(65008)){
+			List<Option> optionList = exchange.getRequestOptions().asSortedList();
+			Map<String, Option> startOptions = new HashMap<String, Option>(); 
 			
+			//FIXA SÅ ATT DET SER UT SÅHÄR!
+			//exchange.getRequestOptions().hasOption(65000)
+			for(int x = 0;x < optionList.size();x++){
+				switch(optionList.get(x).getNumber()){
+				case 123:	startOptions.put("TEST", optionList.get(x));
+							
+							break;
+				case 65000: startOptions.put("PORT", optionList.get(x));
+							System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
+							break;
+				//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
+				//			break;
+				case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
+				System.out.println("ACK_TIMEOUT set");
+							break;
+				case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
+				System.out.println("ACK_RANDOM_FACTOR set");
+							break;
+				case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
+				System.out.println("MAX_RETRANSMIT set");
+							break;
+				case 65005: startOptions.put("NSTART", optionList.get(x));
+							break;
+				case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
+							System.out.println("PROBING_RATE set");
+							break;
+				default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
+							break;
+				}
+			}
+				
+			FileHandler fh = new FileHandler();
+			
+			Date date = new Date();
+			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
+			String formatedDate = format.format(date);
+			String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
+			
+			try {
+				fh.create(logName);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("File Server Error: Unable to create file!");
+				e.printStackTrace();
+			}
+			
+			InetAddress ip = exchange.getSourceAddress();
+			FileServer.rxServer(startOptions, ip, fh);
+			exchange.respond(ResponseCode.CREATED);
 		} else {
 			String URI = exchange.getRequestOptions().getURIQueryString();
 			String [] items = URI.split("=");
@@ -301,7 +352,7 @@ class ListeningResource extends ResourceBase  {
 			if(URIlist.size()>0 && URIlist.get(0)=="token"){
 				FileHandler fh = new FileHandler();
 				Date date = new Date();
-				SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
+				SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 				String formatedDate = format.format(date);
 				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client";
 				String logNameServer = formatedDate + "\\" + URIlist.get(1) + "_server";
@@ -332,58 +383,10 @@ class ListeningResource extends ResourceBase  {
 				
 				
 			} else {
-				List<Option> optionList = exchange.getRequestOptions().asSortedList();
-				Map<String, Option> startOptions = new HashMap<String, Option>(); 
 				
-				//FIXA SÅ ATT DET SER UT SÅHÄR!
-				//exchange.getRequestOptions().hasOption(65000)
-				for(int x = 0;x < optionList.size();x++){
-					switch(optionList.get(x).getNumber()){
-					case 123:	startOptions.put("TEST", optionList.get(x));
-								
-								break;
-					case 65000: startOptions.put("PORT", optionList.get(x));
-								System.out.println("Port "+ optionList.get(x).getIntegerValue() + " recieved");
-								break;
-					//case 65001: startOptions.put("TRANSMISSION_TYPE", optionList.get(x));
-					//			break;
-					case 65002: startOptions.put("ACK_TIMEOUT", optionList.get(x));
-					System.out.println("ACK_TIMEOUT set");
-								break;
-					case 65003: startOptions.put("ACK_RANDOM_FACTOR", optionList.get(x));
-					System.out.println("ACK_RANDOM_FACTOR set");
-								break;
-					case 65004: startOptions.put("MAX_RETRANSMIT", optionList.get(x));
-					System.out.println("MAX_RETRANSMIT set");
-								break;
-					case 65005: startOptions.put("NSTART", optionList.get(x));
-								break;
-					case 65006: startOptions.put("PROBING_RATE", optionList.get(x));
-								System.out.println("PROBING_RATE set");
-								break;
-					default: System.out.println("Could not find a valid option for option number: " + optionList.get(x).getNumber());
-								break;
-					}
-				}
 				
-				FileHandler fh = new FileHandler();
 				
-				Date date = new Date();
-				SimpleDateFormat format = new SimpleDateFormat("ddMMyyyy");
-				String formatedDate = format.format(date);
-				String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
 				
-				try {
-					fh.create(logName);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					System.out.println("File Server Error: Unable to create file!");
-					e.printStackTrace();
-				}
-				
-				InetAddress ip = exchange.getSourceAddress();
-				FileServer.rxServer(startOptions, ip, fh);
-				exchange.respond(ResponseCode.CREATED);
 			}	
 			
 		}	
