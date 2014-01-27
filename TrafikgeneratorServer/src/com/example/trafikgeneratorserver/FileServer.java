@@ -150,15 +150,26 @@ class DummyResource extends ResourceBase  {
 		String event = "";
 
 		String content;
-		String timeStamp = Long.toString(exchange.advanced().getCurrentResponse().getTimestamp());
-		String msgId = Integer.toString(exchange.advanced().getCurrentResponse().getMID());
-		String payloadSize = Integer.toString(exchange.advanced().getCurrentResponse().getPayloadSize());
-		String code = exchange.advanced().getCurrentResponse().getCode().toString();
-		String token = exchange.advanced().getCurrentResponse().getTokenString();
+		String timeStamp = Long.toString(System.currentTimeMillis());
+		//String timeStamp = Long.toString(exchange.advanced().getCurrentResponse().getTimestamp());
+		String msgId = Integer.toString(exchange.advanced().getCurrentRequest().getMID());;
+		String payloadSize = "";
+		String code = "";
+		if(msgType!="NON"){
+			msgId = Integer.toString(exchange.advanced().getCurrentResponse().getMID());
+			payloadSize = Integer.toString(exchange.advanced().getCurrentResponse().getPayloadSize());
+			code = exchange.advanced().getCurrentResponse().getCode().toString();
+		}
 		
+		 
+		String token = exchange.advanced().getCurrentRequest().getTokenString();
 		switch(msgType){
-		case "ACK": event = "ACK_for_msgid_" + exchange.advanced().getCurrentRequest().getMID();
-		case "STOP": event = "STOP";
+			case "ACK": event = "ACK_for_msgid_" + exchange.advanced().getCurrentRequest().getMID(); 
+			break;
+			case "STOP": event = "STOP";
+			break;
+			case "NON": event = "No_response";
+			break;
 		}
 		
 		content = timeStamp + " " + event + " " + msgId  + " " + msgType + " " + payloadSize + " " + code + " " + token; 
@@ -192,13 +203,17 @@ class DummyResource extends ResourceBase  {
 		//STOP code has been sent from client
 		if(exchange.getRequestOptions().hasOption(65009)){
 			exchange.respond(ResponseCode.DELETED); //The server is deleted
-			exchange.notify();						//Hopefully notifies rxServer so that is stops waiting and stops the service
+			//exchange.notify();						//Hopefully notifies rxServer so that is stops waiting and stops the service
 			addToLog("STOP", exchange);
-			
-		} else {
-			//respond to client
+		
+		} else if(exchange.advanced().getCurrentRequest().isConfirmable())	{
+			//Respond to client
 			exchange.respond(ResponseCode.VALID);
 			addToLog("ACK", exchange);
+		
+		} else {
+			//Do not respond to client
+			addToLog("NON", exchange);
 		}
 		/*
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
@@ -290,7 +305,7 @@ class ListeningResource extends ResourceBase  {
 
 	public void handlePOST(CoapExchange exchange) {
 		//If START code has not been sent
-		if(!exchange.getRequestOptions().hasOption(65008)){
+		if(exchange.getRequestOptions().hasOption(65008)){
 			List<Option> optionList = exchange.getRequestOptions().asSortedList();
 			Map<String, Option> startOptions = new HashMap<String, Option>(); 
 			
@@ -330,7 +345,7 @@ class ListeningResource extends ResourceBase  {
 			Date date = new Date();
 			SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 			String formatedDate = format.format(date);
-			String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server";
+			String logName = formatedDate + "\\" + exchange.advanced().getCurrentRequest().getTokenString() + "_server.log";
 			
 			try {
 				fh.create(logName);
@@ -354,9 +369,9 @@ class ListeningResource extends ResourceBase  {
 				Date date = new Date();
 				SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 				String formatedDate = format.format(date);
-				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client";
-				String logNameServer = formatedDate + "\\" + URIlist.get(1) + "_server";
-				String logName = formatedDate + "\\" + URIlist.get(1);
+				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client.log";
+				String logNameServer = formatedDate + "\\" + URIlist.get(1) + "_server.log";
+				String logName = formatedDate + "\\" + URIlist.get(1) + ".log";
 				
 				try {
 					fh.create(logNameClient);
@@ -366,7 +381,7 @@ class ListeningResource extends ResourceBase  {
 					e.printStackTrace();
 				}
 				try {
-					fh.add(exchange.getRequestText());
+					fh.addLog(exchange.getRequestText());
 				} catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
 					System.out.println("File Server Error: Could not save payload to file");

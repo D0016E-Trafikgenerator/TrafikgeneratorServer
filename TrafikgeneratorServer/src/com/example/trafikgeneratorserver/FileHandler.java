@@ -24,12 +24,13 @@ public class FileHandler {
 	 */
 	public static void main(String[] args) throws FileNotFoundException {
 		//read(testFile, testInsertion);
+		
 	}
 	private void delete(String fileName){
 		//Not prioratized
 	}
 	void create(String fileName) throws IOException { 
-		Path logName = Paths.get(defaultPath + "\\" + fileName);
+		logName = Paths.get(defaultPath + "\\" + fileName);
 		Files.createDirectories(logName.getParent());
 		try {
 			Files.createFile(logName);
@@ -39,8 +40,7 @@ public class FileHandler {
 		}
 		
 	}
-	//skdajskld
-	void add(String content) throws FileNotFoundException{
+	void addLog(String content) throws FileNotFoundException{
 		StringList sl = new StringList();
 		sl.read(logName.toString());
 		
@@ -51,6 +51,26 @@ public class FileHandler {
 			sl.add(sb.get(i));
 		}
 		sl.save(logName.toString());
+	}
+	//skdajskld
+	void add(String content) throws FileNotFoundException{
+		try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(logName.toString(), true)))) {
+		    out.println("\n" + content);
+		    out.close();
+		}catch (IOException e) {
+		    //exception handling left as an exercise for the reader
+		}
+		
+		/*StringList sl = new StringList();
+		sl.read(logName.toString());
+		
+		String [] items = content.split("\n");
+		ArrayList<String> sb = new ArrayList<String>(Arrays.asList(items));
+		
+		for(int i = 0; i < sb.size(); i++){
+			sl.add(sb.get(i));
+		}
+		sl.save(logName.toString());*/
 	}
 	
 	void merge(String fileName, String clientLog, String serverLog) throws FileNotFoundException{
