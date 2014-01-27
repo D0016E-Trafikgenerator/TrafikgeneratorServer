@@ -144,6 +144,7 @@ class DummyResource extends ResourceBase  {
 		fh = FH;
 		// TODO Auto-generated constructor stub
 	}
+	//skadjlksjd
 	private void addToLog(String msgType, CoapExchange exchange){
 		//Save log 
 		String event = "";

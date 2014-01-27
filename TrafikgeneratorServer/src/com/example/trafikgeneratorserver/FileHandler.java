@@ -39,7 +39,7 @@ public class FileHandler {
 		}
 		
 	}
-	
+	//skdajskld
 	void add(String content) throws FileNotFoundException{
 		StringList sl = new StringList();
 		sl.read(logName.toString());
