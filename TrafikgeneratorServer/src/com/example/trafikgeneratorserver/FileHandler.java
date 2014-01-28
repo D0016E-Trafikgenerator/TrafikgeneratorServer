@@ -90,15 +90,25 @@ public class FileHandler {
 	
 	private static StringList mergeSort(StringList sl, StringList insertions){
 		//Merge two sorted 
-		int slCounter = 0;
-		int insertCounter = 0;
-		
 		StringList sb = new StringList();
+		sb.add(sl.get(0));
+		int slCounter = 1;
+		int insertCounter = 0;
 		
 		while( slCounter < sl.size() && insertCounter < insertions.size()){
 			//Get timestamps
-			int slTime = Integer.parseInt(sl.get(slCounter).split(" ")[0]);
-			int insTime = Integer.parseInt(insertions.get(insertCounter).split(" ")[0]);
+			
+			//Skip empty lines
+			if(sl.get(slCounter).equals("")){
+				slCounter++;
+				continue;
+			} else if (insertions.get(insertCounter).equals("")){
+				insertCounter++;
+				continue;
+			}
+			
+			long slTime = Long.parseLong(sl.get(slCounter).split(" ")[0]);
+			long insTime = Long.parseLong(insertions.get(insertCounter).split(" ")[0]);
 			
 			//Append smallest timestamp
 			if(slTime < insTime){
@@ -112,10 +122,16 @@ public class FileHandler {
 		//Append leftovers
 		if(slCounter < sl.size()){
 			for(int i=slCounter; i < sl.size(); i += 1){
+				if(sl.get(i).equals("")){
+					continue;
+				} 
 				sb.add(sl.get(i));
 			}
 		} else {
 			for(int i=insertCounter; i < insertions.size(); i += 1){
+				if (insertions.get(i).equals("")){
+					continue;
+				}
 				sb.add(insertions.get(i));
 			}
 		}

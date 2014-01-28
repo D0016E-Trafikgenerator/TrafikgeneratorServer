@@ -1,16 +1,20 @@
 package com.example.trafikgeneratorserver;
 
 import java.awt.event.ActionEvent;
+import java.net.InetAddress;
+import java.util.Date;
+import org.apache.commons.net.ntp.NTPUDPClient; 
+import org.apache.commons.net.ntp.TimeInfo;
 import java.awt.event.ActionListener;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +33,7 @@ import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 import java.util.Observable;
 import java.util.Observer;
 public class FileServer {
-	
+	static Server testServer;
 	private static long startTime;
 	public static void main(String[] args)
 	{
@@ -40,7 +44,7 @@ public class FileServer {
 		//RandomResource slumpen = new RandomResource("random");
 		//självaServern.add(självaResursen);
 		//självaServern.add(slumpen);
-		ListeningResource listener = new ListeningResource("control");
+		ListeningResource listener = new ListeningResource("control", testServer);
 		mainServer.add(listener);
 		mainServer.start();
 }
@@ -60,23 +64,22 @@ public class FileServer {
 		självaServern.start();
 	}
 	*/
-	public static void rxServer(Map<String, Option> args, InetAddress ip, FileHandler fh) {
+	public static Server rxServer(Map<String, Option> args, InetAddress ip, FileHandler fh) {
 		NetworkConfig nwSettings = nwSetup(args);
-		final Server testServer = new Server(nwSettings);
+		testServer = new Server(nwSettings);
 		testServer.setExecutor(Executors.newScheduledThreadPool(4));
 			
 		//args to resource constructor is name of resource + senders IP
 		//IP kan man få från själva CoAP-exchange, men den kan ju vara lite jobbig att få _här_
 		//Kanske bättre att använda någon annanstans?
-		
-		startTime = System.nanoTime();
-		
-		DummyResource dummyResource = new DummyResource("dummydata",ip, fh);
+				
+		DummyResource dummyResource = new DummyResource("dummydata",ip, fh, testServer);
 		FileServerResource fileServerResource = new FileServerResource("fileserver", ip);
 		testServer.add(dummyResource);
 		testServer.add(fileServerResource);//fileServerResource är ej gjord ännu.
 		testServer.start();
 		
+		return testServer;
 		//Somehow make testServer stop when STOP has been sent from client.
 		/*synchronized(dummyResource) {
 			try {
@@ -92,6 +95,7 @@ public class FileServer {
 				}
 			}
 		}*/
+		
 
 	}
 	
@@ -138,44 +142,65 @@ public class FileServer {
 class DummyResource extends ResourceBase  {
 	private InetAddress senderIP;
 	private FileHandler fh;
-	public DummyResource(String name, InetAddress ip, FileHandler FH) {
+	Date time;
+	NTPUDPClient timeClient;
+	TimeInfo timeInfo;
+	String TIME_SERVER;
+	InetAddress inetAddress;
+	Server testServer;
+	public DummyResource(String name, InetAddress ip, FileHandler FH, Server testServer) {
 		super(name);
 		senderIP = ip;
 		fh = FH;
+		this.testServer = testServer;
+		TIME_SERVER = "time-a.nist.gov";   
+		timeClient = new NTPUDPClient();
+		inetAddress = null;
+		try {
+			inetAddress = InetAddress.getByName("0.se.pool.ntp.org");
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			System.out.println("Server Error: NTP Server not found");
+			e1.printStackTrace();
+		}
+		
 		// TODO Auto-generated constructor stub
 	}
-	//skadjlksjd
-	private void addToLog(String msgType, CoapExchange exchange){
+	
+	private void addToLog(String event, String msgType, CoapExchange exchange){
 		//Save log 
-		String event = "";
-
-		String content;
-		String timeStamp = Long.toString(System.currentTimeMillis());
-		//String timeStamp = Long.toString(exchange.advanced().getCurrentResponse().getTimestamp());
-		String msgId = Integer.toString(exchange.advanced().getCurrentRequest().getMID());;
+		String timeStamp =""; //NTP server = 0.se.pool.ntp.org
+		String msgId = "";
 		String payloadSize = "";
 		String code = "";
-		if(msgType!="NON"){
+		String logContent = "";
+		String token = "";
+		try {
+			timeInfo = timeClient.getTime(inetAddress);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Server Error: Could not get time from NTP server");
+			e.printStackTrace();
+		}
+		long returnTime = timeInfo.getMessage().getTransmitTimeStamp().getTime();
+		time = new Date(returnTime);
+		timeStamp = Long.toString(time.getTime());
+		if(event.equals("SERVER_RCVD")){
+			msgId = Integer.toString(exchange.advanced().getCurrentRequest().getMID());
+			token = exchange.advanced().getCurrentRequest().getTokenString();
+			payloadSize = Integer.toString(exchange.advanced().getCurrentRequest().getPayloadSize());
+			code = exchange.advanced().getCurrentRequest().getCode().toString();
+		} else if (event.equals("SERVER_SENT")) {
 			msgId = Integer.toString(exchange.advanced().getCurrentResponse().getMID());
 			payloadSize = Integer.toString(exchange.advanced().getCurrentResponse().getPayloadSize());
 			code = exchange.advanced().getCurrentResponse().getCode().toString();
+			token = exchange.advanced().getCurrentResponse().getTokenString();
 		}
 		
-		 
-		String token = exchange.advanced().getCurrentRequest().getTokenString();
-		switch(msgType){
-			case "ACK": event = "ACK_for_msgid_" + exchange.advanced().getCurrentRequest().getMID(); 
-			break;
-			case "STOP": event = "STOP";
-			break;
-			case "NON": event = "No_response";
-			break;
-		}
-		
-		content = timeStamp + " " + event + " " + msgId  + " " + msgType + " " + payloadSize + " " + code + " " + token; 
+		logContent = timeStamp + " " + event + " " + msgId  + " " + msgType + " " + payloadSize + " " + code + " " + token; 
 
 		try {
-			fh.add(content);
+			fh.add(logContent);
 		} catch (FileNotFoundException e) {
 			System.out.println("File Server ERROR: Log file not found!");
 			e.printStackTrace();
@@ -200,20 +225,23 @@ class DummyResource extends ResourceBase  {
 	}	
 	public void handlePOST(CoapExchange exchange) {
 		
+		
+		
 		//STOP code has been sent from client
 		if(exchange.getRequestOptions().hasOption(65009)){
+			addToLog("SERVER_RCVD", "STOP", exchange);
 			exchange.respond(ResponseCode.DELETED); //The server is deleted
-			//exchange.notify();						//Hopefully notifies rxServer so that is stops waiting and stops the service
-			addToLog("STOP", exchange);
+			testServer.stop();
 		
 		} else if(exchange.advanced().getCurrentRequest().isConfirmable())	{
 			//Respond to client
+			addToLog("SERVER_RCVD", "CON", exchange);
 			exchange.respond(ResponseCode.VALID);
-			addToLog("ACK", exchange);
+			addToLog("SERVER_SENT", "ACK", exchange);
 		
 		} else {
 			//Do not respond to client
-			addToLog("NON", exchange);
+			addToLog("SERVER_RCVD", "NON", exchange);
 		}
 		/*
 		//ta emot slumpdata exchange.etcetera, jämför den med egenskapad slumpdata, jämför och skicka tillbaka bedömning
@@ -294,8 +322,10 @@ class FileServerResource extends ResourceBase {
  */
 
 class ListeningResource extends ResourceBase  {
-	public ListeningResource(String name) {
+	Server testServer;
+	public ListeningResource(String name, Server testServer) {
 		super(name);
+		this.testServer = testServer;
 		// TODO Auto-generated constructor stub
 	}
 	/*
@@ -304,7 +334,7 @@ class ListeningResource extends ResourceBase  {
 	 */
 
 	public void handlePOST(CoapExchange exchange) {
-		//If START code has not been sent
+		//If START code has been sent
 		if(exchange.getRequestOptions().hasOption(65008)){
 			List<Option> optionList = exchange.getRequestOptions().asSortedList();
 			Map<String, Option> startOptions = new HashMap<String, Option>(); 
@@ -356,15 +386,17 @@ class ListeningResource extends ResourceBase  {
 			}
 			
 			InetAddress ip = exchange.getSourceAddress();
-			FileServer.rxServer(startOptions, ip, fh);
+			testServer = FileServer.rxServer(startOptions, ip, fh);
 			exchange.respond(ResponseCode.CREATED);
-		} else {
+		} else if(exchange.getRequestOptions().hasOption(65009)) {
 			String URI = exchange.getRequestOptions().getURIQueryString();
 			String [] items = URI.split("=");
 			ArrayList<String> URIlist = new ArrayList<String>(Arrays.asList(items));
 			
 			//Test is finished, client sends log to be merged
-			if(URIlist.size()>0 && URIlist.get(0)=="token"){
+			System.out.println("\n" + URIlist + "\n");
+			if(URIlist.size()>0 && URIlist.get(0).equals("token")){
+				System.out.println("\n" + "MERGING OF LOGS STARTED!" + "\n");
 				FileHandler fh = new FileHandler();
 				Date date = new Date();
 				SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
@@ -382,6 +414,7 @@ class ListeningResource extends ResourceBase  {
 				}
 				try {
 					fh.addLog(exchange.getRequestText());
+					System.out.println("\n" + exchange.getRequestText() + "\n");
 				} catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
 					System.out.println("File Server Error: Could not save payload to file");
@@ -395,7 +428,8 @@ class ListeningResource extends ResourceBase  {
 					e.printStackTrace();
 				}
 				
-				
+				exchange.respond(ResponseCode.DELETED);
+				testServer.stop();
 				
 			} else {
 				
