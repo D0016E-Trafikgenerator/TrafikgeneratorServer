@@ -1,4 +1,4 @@
-package com.example.trafikgeneratorserver;
+package se.ltu.trafikgeneratorserver;
 import java.io.*;
 import java.util.*;
 import java.lang.Object;

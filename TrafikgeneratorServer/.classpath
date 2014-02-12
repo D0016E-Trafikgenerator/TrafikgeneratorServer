@@ -5,6 +5,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/californium"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/element-connector"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/Scandium"/>
-	<classpathentry kind="lib" path="C:/Users/Klug/Downloads/commons-net-3.3.jar"/>
+	<classpathentry kind="lib" path="lib/commons-net-3.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

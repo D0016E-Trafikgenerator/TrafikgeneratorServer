@@ -1,4 +1,4 @@
-package com.example.trafikgeneratorserver;
+package se.ltu.trafikgeneratorserver;
 
 import java.awt.event.ActionEvent;
 import java.net.InetAddress;
