@@ -401,7 +401,7 @@ class ListeningResource extends ResourceBase  {
 				Date date = new Date();
 				SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 				String formatedDate = format.format(date);
-				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client.log";
+				String logNameClient = formatedDate + "\\" + URIlist.get(1) + "_client.pcap";
 				String logNameServer = formatedDate + "\\" + URIlist.get(1) + "_server.log";
 				String logName = formatedDate + "\\" + URIlist.get(1) + ".log";
 				
@@ -418,13 +418,6 @@ class ListeningResource extends ResourceBase  {
 				} catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
 					System.out.println("File Server Error: Could not save payload to file");
-					e.printStackTrace();
-				}
-				try {
-					fh.merge(logName, logNameClient, logNameServer);
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					System.out.println("File Server Error: Could not merge log files");
 					e.printStackTrace();
 				}
 				
