@@ -13,14 +13,14 @@ public class TrafikgeneratorServer extends Server {
 	public TrafikgeneratorServer(NetworkConfig networkConfig) {
 		super(networkConfig);
 	}
-	public void main(String[] args) {
+	public static void main(String[] args) {
 		//Test protocol 1.2b.1
 		//TODO: code to start NTP server
 		TrafikgeneratorServer server = new TrafikgeneratorServer(new NetworkConfig());
 		server.setExecutor(Executors.newScheduledThreadPool(4));
-		ControlResource control = new ControlResource("control", this);
+		ControlResource control = new ControlResource("control", server);
 		server.add(control);
-		FileResource file = new FileResource("file", this);
+		FileResource file = new FileResource("file", server);
 		server.add(file);
 		server.start();
 	}

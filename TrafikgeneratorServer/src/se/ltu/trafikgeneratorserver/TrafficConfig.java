@@ -165,7 +165,7 @@ public class TrafficConfig {
 		list += ",NSTART=" + Integer.toString(config.getInt("NSTART"));
 		list += ",DEFAULT_LEISURE=" + Integer.toString(config.getInt("DEFAULT_LEISURE"));
 		list += ",MAX_RETRANSMIT=" + Integer.toString(config.getInt("MAX_RETRANSMIT"));
-		list += ",EXCHANGE_LIFECYCLE=" + Long.toString(config.getLong("EXCHANGE_LIFECYCLE"));
+//		list += ",EXCHANGE_LIFECYCLE=" + Long.toString(config.getLong("EXCHANGE_LIFECYCLE"));
 		list += ",MAX_MESSAGE_SIZE=" + Integer.toString(config.getInt("MAX_MESSAGE_SIZE"));
 		return list;
 	}
@@ -177,12 +177,13 @@ public class TrafficConfig {
 				continue;
 			String[] setting = array[i].split("=");
 			//else if (setting.equals(""))
-			if (setting.equals("DEFAULT_COAP_PORT") || setting.equals("ACK_TIMEOUT") || setting.equals("ACK_TIMEOUT_SCALE") || setting.equals("NSTART") || setting.equals("DEFAULT_LEISURE") || setting.equals("MAX_RETRANSMIT") || setting.equals("MAX_MESSAGE_SIZE"))
-				config.setInt(array[0], Integer.valueOf(array[1]));
-			else if (setting.equals("ACK_RANDOM_FACTOR"))
-				config.setFloat(array[0], Float.valueOf(array[1]));
-			else if (setting.equals("EXCHANGE_LIFECYCLE"))
-				config.setFloat(array[0], Long.valueOf(array[1]));
+			if (setting[0].equals("DEFAULT_COAP_PORT") || setting[0].equals("ACK_TIMEOUT") || setting[0].equals("ACK_TIMEOUT_SCALE") || setting[0].equals("NSTART") || setting[0].equals("DEFAULT_LEISURE") || setting[0].equals("MAX_RETRANSMIT") || setting[0].equals("MAX_MESSAGE_SIZE")) {
+				config.setInt(setting[0], Integer.valueOf(setting[1]));
+			}
+			else if (setting[0].equals("ACK_RANDOM_FACTOR"))
+				config.setFloat(setting[0], Float.valueOf(setting[1]));
+			//else if (setting[0].equals("EXCHANGE_LIFECYCLE"))
+				//config.setFloat(setting[0], Long.valueOf(setting[1]));
 		}
 		return config;
 	}

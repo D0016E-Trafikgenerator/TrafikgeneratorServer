@@ -16,7 +16,7 @@ public class ControlResource extends ResourceBase  {
 		this.server = server;
 	}
 	public void handlePOST(CoapExchange exchange) {
-		//exchange.accept();
+		exchange.accept();
 		String[] options = exchange.getRequestText().split(";");
 		if (options.length == 2) {
 			String[] suboptions = options[0].split(",");
@@ -29,16 +29,18 @@ public class ControlResource extends ResourceBase  {
 			File appRoot = new File(System.getProperty("user.home"));
 			File subDir = new File(appRoot, "logs");
 			File file = new File(subDir, token + "-rcvr.pcap");
+			file.getParentFile().mkdirs();
 			try {
 				if (!file.exists() && file.createNewFile()) {
 					//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
 					//TODO: insert code to start pcap logging 
 					if (file.exists()) {
-						NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options[1]); 
+						NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options[1]);
 						TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
 						testserver.setExecutor(Executors.newScheduledThreadPool(4));
 						TestResource test = new TestResource("test", null, null);
 						testserver.clientTimeBeforeTest = clientTimeBeforeTest;
+						testserver.token = token;
 						testserver.add(test);
 						testserver.start();
 						server.subservers.add(testserver);
@@ -53,13 +55,13 @@ public class ControlResource extends ResourceBase  {
 			exchange.respond(ResponseCode.BAD_OPTION);
 	}
 	public void handleDELETE(CoapExchange exchange) {
-		//exchange.accept();
+		exchange.accept();
 		String query = exchange.getRequestOptions().getURIQueryString();
-		if (query.split("&").length == 1 && query.split("=").length == 2 && query.split("=")[0].equals("token")) {
+		if (query.split("&").length == 1 && query.split(",").length == 1 && query.split("=")[0].equals("token")) {
 			String payload = exchange.getRequestText();
-			Long clientTimeAfterTest = null;
+			Long clientTimeAfterTest = (long) 0;
 			if (payload.split("=").length == 2 && payload.split("=")[0].equals("NTP_OFFSET"))
-				clientTimeAfterTest = Long.valueOf(payload.split("=")[0]);
+				clientTimeAfterTest = Long.valueOf(payload.split("=")[1]);
 			String token = query.split("=")[1];
 			for (TrafikgeneratorServer server : this.server.subservers) {
 				if (server.token.equals(token)) {
