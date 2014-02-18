@@ -37,16 +37,9 @@ public class ControlResource extends ResourceBase  {
 			try {
 				if (!file.exists() && file.createNewFile()) {
 					//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
-					
-					Runtime rt = Runtime.getRuntime();
-					
-					try {
-						proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
-								"dumpcap -w " + file.toString() + " -f \"udp port 5830\"\"");
 						
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+					Logger.startLog(file);
+					
 					if (file.exists()) {
 						NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options[1]);
 						TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
@@ -79,7 +72,7 @@ public class ControlResource extends ResourceBase  {
 			for (TrafikgeneratorServer server : this.server.subservers) {
 				if (server.token.equals(token)) {
 					//Test protocol 1.2b.7
-					proc.destroy();
+					Logger.exit();
 					server.clientTimeAfterTest = clientTimeAfterTest;
 					server.stop();
 					exchange.respond(ResponseCode.DELETED);

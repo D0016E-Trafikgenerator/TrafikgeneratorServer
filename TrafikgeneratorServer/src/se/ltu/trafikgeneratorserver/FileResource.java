@@ -42,44 +42,17 @@ public class FileResource extends ResourceBase {
 							clientTimeAfterTest = server.clientTimeAfterTest;
 							int timeDif = (int) ((clientTimeAfterTest+clientTimeBeforeTest)/2);
 							//Test protocol 1.2b.10
-							if (Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
-								Runtime rt = Runtime.getRuntime();
-								Process proc = null;
+							if (true || Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
 								
 								//Sync timestamps with editcap
-								try {
-									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
-											"&& editcap -t " + Integer.toString(timeDif) + file.toString() + " " + file.toString().replace(".pcap", "_edited.pcap") +"  \"");
-									
-								} catch (IOException e) {
-								
-									e.printStackTrace();
-									System.out.println("Wireshark Error: editcap failed");
-								}
-								proc.destroy();
+								Logger.editLog(file, timeDif);
 								
 								//Merge logs with mergecap
-								try {
-									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
-											"&& mergecap -w " + file.toString().replace("-sndr", "") + " " +
-											file.toString().replace("sndr", "rcvr") + " " +
-											file.toString().replace(".pcap", "_edited.pcap") +"  \"");
-									
-								} catch (IOException e) {									
-									e.printStackTrace();
-									System.out.println("Wireshark Error: mergecap failed");
-								}
-								proc.destroy();
+								Logger.mergeLog(file);
+								//proc.destroy();
 								
 								//Open wireshark with merged logs
-								try {
-									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
-											"&& wireshartl -r " + file.toString().replace("-sndr", "") +" \"");
-									
-								} catch (IOException e) {
-									e.printStackTrace();
-									System.out.println("Wireshark Error: wireshark failed to open merged log");
-								}
+								Logger.showLog(file);
 								
 							}
 							else {
