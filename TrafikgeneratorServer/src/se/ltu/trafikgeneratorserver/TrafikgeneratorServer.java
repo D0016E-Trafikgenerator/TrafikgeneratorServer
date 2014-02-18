@@ -8,6 +8,7 @@ import ch.ethz.inf.vs.californium.server.Server;
 
 public class TrafikgeneratorServer extends Server {
 	ArrayList<TrafikgeneratorServer> subservers = new ArrayList<TrafikgeneratorServer>();
+	
 	String token = "";
 	long clientTimeBeforeTest, clientTimeAfterTest;
 	public TrafikgeneratorServer(NetworkConfig networkConfig) {
@@ -16,6 +17,7 @@ public class TrafikgeneratorServer extends Server {
 	public static void main(String[] args) {
 		//Test protocol 1.2b.1
 		//TODO: code to start NTP server
+		NTPServer ntpServer = new NTPServer();
 		TrafikgeneratorServer server = new TrafikgeneratorServer(new NetworkConfig());
 		server.setExecutor(Executors.newScheduledThreadPool(4));
 		ControlResource control = new ControlResource("control", server);

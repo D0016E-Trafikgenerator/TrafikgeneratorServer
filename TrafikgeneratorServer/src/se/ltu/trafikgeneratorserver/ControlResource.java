@@ -12,6 +12,7 @@ import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
 import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 
 public class ControlResource extends ResourceBase  {
+	private Process proc;
 	private TrafikgeneratorServer server;
 	public ControlResource(String name, TrafikgeneratorServer server) {
 		super(name);
@@ -36,7 +37,16 @@ public class ControlResource extends ResourceBase  {
 			try {
 				if (!file.exists() && file.createNewFile()) {
 					//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
-					//TODO: insert code to start pcap logging 
+					
+					Runtime rt = Runtime.getRuntime();
+					
+					try {
+						proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
+								"dumpcap -w " + file.toString() + " -f \"udp port 5830\"\"");
+						
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 					if (file.exists()) {
 						NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options[1]);
 						TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
@@ -69,7 +79,7 @@ public class ControlResource extends ResourceBase  {
 			for (TrafikgeneratorServer server : this.server.subservers) {
 				if (server.token.equals(token)) {
 					//Test protocol 1.2b.7
-					//TODO: code to end pcap logging
+					proc.destroy();
 					server.clientTimeAfterTest = clientTimeAfterTest;
 					server.stop();
 					exchange.respond(ResponseCode.DELETED);
