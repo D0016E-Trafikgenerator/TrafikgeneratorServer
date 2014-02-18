@@ -50,6 +50,8 @@ public class FileResource extends ResourceBase {
 							if (Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
 								Runtime rt = Runtime.getRuntime();
 								Process proc = null;
+								
+								//Sync timestamps with editcap
 								try {
 									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
 											"&& editcap -t " + Integer.toString(timeDif) + file.toString() + " " + file.toString().replace(".pcap", "_edited.pcap") +"  \"");
@@ -61,21 +63,33 @@ public class FileResource extends ResourceBase {
 								}
 								proc.destroy();
 								
+								//Merge logs with mergecap
 								try {
 									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
 											"&& mergecap -w " + file.toString().replace("-sndr", "") + " " +
 											file.toString().replace("sndr", "rcvr") + " " +
 											file.toString().replace(".pcap", "_edited.pcap") +"  \"");
 									
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
+								} catch (IOException e) {									
 									e.printStackTrace();
 									System.out.println("Wireshark Error: mergecap failed");
 								}
 								proc.destroy();
 								
+<<<<<<< Upstream, based on rcv-pcap
 >>>>>>> 91c16b4 NTP merge timefix
 								//TODO: start Wireshark with the merged file
+=======
+								//Open wireshark with merged logs
+								try {
+									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
+											"&& wireshartl -r " + file.toString().replace("-sndr", "") +" \"");
+									
+								} catch (IOException e) {
+									e.printStackTrace();
+									System.out.println("Wireshark Error: wireshark failed to open merged log");
+								}
+>>>>>>> 90f6678 123
 								
 							}
 							else {
