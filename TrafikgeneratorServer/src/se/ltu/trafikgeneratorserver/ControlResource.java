@@ -2,6 +2,8 @@ package se.ltu.trafikgeneratorserver;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.Executors;
 
 import ch.ethz.inf.vs.californium.coap.CoAP.ResponseCode;
@@ -26,9 +28,10 @@ public class ControlResource extends ResourceBase  {
 					clientTimeBeforeTest = Long.valueOf(suboptions[i].split("=")[1]);
 			//Test protocol 1.2b.4
 			String token = exchange.advanced().getRequest().getTokenString();
-			File appRoot = new File(System.getProperty("user.home"));
+			File root = new File(System.getProperty("user.home"));
+			File appRoot = new File(root, "trafikgeneratorcoap");
 			File subDir = new File(appRoot, "logs");
-			File file = new File(subDir, token + "-rcvr.pcap");
+			File file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-rcvr.pcap");
 			file.getParentFile().mkdirs();
 			try {
 				if (!file.exists() && file.createNewFile()) {

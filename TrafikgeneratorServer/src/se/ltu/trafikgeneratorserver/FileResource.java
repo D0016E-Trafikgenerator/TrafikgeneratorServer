@@ -18,29 +18,30 @@ public class FileResource extends ResourceBase {
 		this.server = server;
 	}
 	public void handlePOST(CoapExchange exchange) {
-		//exchange.accept();
+		exchange.accept();
 		String query = exchange.getRequestOptions().getURIQueryString();
 		if (query.split("&").length == 1 && query.split("=").length == 2 && query.split("=")[0].equals("token")) {
 			String token = query.split("=")[1];
-			File appRoot = new File(System.getProperty("user.home"));
+			File root = new File(System.getProperty("user.home"));
+			File appRoot = new File(root, "trafikgeneratorcoap");
 			File subDir = new File(appRoot, "logs");
+			subDir.mkdirs();
 			//TODO: generalize so the user doesn't have to send the file the same day
-			File file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + token + "-rcvr.pcap");
+			File file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-rcvr.pcap");
 			if (file.exists()) {
-				file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + token + "-sndr.pcap");
+				file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-sndr.pcap");
 				try {
 					//Test protocol 1.2b.9
 					FileOutputStream fos = new FileOutputStream(file);
 					fos.write(exchange.getRequestPayload());
 					fos.close();
 					exchange.respond(ResponseCode.VALID);
-
 					for (TrafikgeneratorServer server : this.server.subservers) {
 						if (server.token.equals(token)) {
 							clientTimeBeforeTest = server.clientTimeBeforeTest;
 							clientTimeAfterTest = server.clientTimeAfterTest;
 							//Test protocol 1.2b.10
-							if (Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
+							if (true || Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
 								//TODO: use editcap to correct timestamps in received file
 								//TODO: use mergecap to merge server and client log files
 								//TODO: start Wireshark with the merged file
