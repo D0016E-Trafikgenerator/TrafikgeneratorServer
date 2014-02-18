@@ -42,11 +42,6 @@ public class FileResource extends ResourceBase {
 							clientTimeAfterTest = server.clientTimeAfterTest;
 							int timeDif = (int) ((clientTimeAfterTest+clientTimeBeforeTest)/2);
 							//Test protocol 1.2b.10
-<<<<<<< Upstream, based on rcv-pcap
-							if (true || Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
-								//TODO: use editcap to correct timestamps in received file
-								//TODO: use mergecap to merge server and client log files
-=======
 							if (Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
 								Runtime rt = Runtime.getRuntime();
 								Process proc = null;
@@ -76,10 +71,6 @@ public class FileResource extends ResourceBase {
 								}
 								proc.destroy();
 								
-<<<<<<< Upstream, based on rcv-pcap
->>>>>>> 91c16b4 NTP merge timefix
-								//TODO: start Wireshark with the merged file
-=======
 								//Open wireshark with merged logs
 								try {
 									proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
@@ -89,7 +80,6 @@ public class FileResource extends ResourceBase {
 									e.printStackTrace();
 									System.out.println("Wireshark Error: wireshark failed to open merged log");
 								}
->>>>>>> 90f6678 123
 								
 							}
 							else {
