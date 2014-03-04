@@ -1,11 +1,15 @@
 package se.ltu.trafikgeneratorserver;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 public class Logger {
 	static Process proc;
 	static Process tempProc;
+	private static final String TASKLIST = "tasklist";
+	private static final String KILL = "taskkill /IM ";
 	/**
 	 * @param args
 	 */
@@ -73,6 +77,41 @@ public class Logger {
 		}
 	}
 	public static void exit(){
-		proc.destroy();
+		//proc.destroy();
+		 String processName = "dumpcap.exe";
+
+		 //System.out.print(isProcessRunging(processName));
+
+		 try {
+			if (isProcessRunging(processName)) {
+
+			  killProcess(processName);
+			 }
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	private static boolean isProcessRunging(String serviceName) throws Exception {
+
+		 Process p = Runtime.getRuntime().exec(TASKLIST);
+		 BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+		 String line;
+		 while ((line = reader.readLine()) != null) {
+
+		  System.out.println(line);
+		  if (line.contains(serviceName)) {
+		   return true;
+		  }
+		 }
+
+		 return false;
+
+		}
+
+	private static void killProcess(String serviceName) throws Exception {
+		System.out.println("PROC KILLED!");
+	  Runtime.getRuntime().exec(KILL + serviceName);
+
 	}
 }

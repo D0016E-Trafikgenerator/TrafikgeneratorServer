@@ -20,45 +20,41 @@ public class ControlResource extends ResourceBase  {
 	}
 	public void handlePOST(CoapExchange exchange) {
 		exchange.accept();
-		String[] options = exchange.getRequestText().split(";");
-		if (options.length == 2) {
-			String[] suboptions = options[0].split(",");
-			Long clientTimeBeforeTest = null;
-			for (int i = 0; i < suboptions.length; i++)
-				if (suboptions[i].split("=").length == 2 && suboptions[i].split("=")[0].equals("NTP_OFFSET"))
-					clientTimeBeforeTest = Long.valueOf(suboptions[i].split("=")[1]);
-			//Test protocol 1.2b.4
-			String token = exchange.advanced().getRequest().getTokenString();
-			File root = new File(System.getProperty("user.home"));
-			File appRoot = new File(root, "trafikgeneratorcoap");
-			File subDir = new File(appRoot, "logs");
-			File file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-rcvr.pcap");
-			file.getParentFile().mkdirs();
-			try {
-				if (!file.exists() && file.createNewFile()) {
-					//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
-						
-					Logger.startLog(file);
+		String options = exchange.getRequestText();
+		
+		//Long clientTimeBeforeTest = null;
+		String query = exchange.getRequestOptions().getURIQueryString();
+		String time = query.split("=")[1];
+		//Test protocol 1.3a.4
+		String token = exchange.advanced().getRequest().getTokenString();
+		File root = new File(System.getProperty("user.home"));
+		File appRoot = new File(root, "trafikgeneratorcoap");
+		File subDir = new File(appRoot, "logs");
+		File file = new File(subDir, time + "-" + token + "-rcvr.pcap");
+		file.getParentFile().mkdirs();
+		try {
+			if (!file.exists() && file.createNewFile()) {
+				//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
 					
-					if (file.exists()) {
-						NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options[1]);
-						TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
-						testserver.setExecutor(Executors.newScheduledThreadPool(4));
-						TestResource test = new TestResource("test", null, null);
-						testserver.clientTimeBeforeTest = clientTimeBeforeTest;
-						testserver.token = token;
-						testserver.add(test);
-						testserver.start();
-						server.subservers.add(testserver);
-						exchange.respond(ResponseCode.CREATED);
-					}
+				Logger.startLog(file);
+				
+				if (file.exists()) {
+					NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options);
+					TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
+					testserver.setExecutor(Executors.newScheduledThreadPool(4));
+					TestResource test = new TestResource("test", null, null);
+					//testserver.clientTimeBeforeTest = clientTimeBeforeTest;
+					testserver.token = token;
+					testserver.add(test);
+					testserver.start();
+					server.subservers.add(testserver);
+					exchange.respond(ResponseCode.CREATED);
 				}
-			} catch (IOException e) {
-				exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 			}
+		} catch (IOException e) {
+			exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 		}
-		else
-			exchange.respond(ResponseCode.BAD_OPTION);
+		
 	}
 	public void handleDELETE(CoapExchange exchange) {
 		exchange.accept();

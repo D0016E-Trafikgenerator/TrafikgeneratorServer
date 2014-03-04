@@ -20,32 +20,35 @@ public class FileResource extends ResourceBase {
 	public void handlePOST(CoapExchange exchange) {
 		exchange.accept();
 		String query = exchange.getRequestOptions().getURIQueryString();
-		if (query.split("&").length == 1 && query.split("=").length == 2 && query.split("=")[0].equals("token")) {
-			String token = query.split("=")[1];
+		if (query.split("&").length == 3 && query.split("=").length == 4 /*&& query.split("=")[0].equals("token")*/) {
+			String[] options = query.split("&");
+			String token = options[1].split("=")[1];
+			String time = options[2].split("=")[1];
+			String fileType = options[0].split("=")[1];
 			File root = new File(System.getProperty("user.home"));
 			File appRoot = new File(root, "trafikgeneratorcoap");
 			File subDir = new File(appRoot, "logs");
 			subDir.mkdirs();
-			//TODO: generalize so the user doesn't have to send the file the same day
-			File file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-rcvr.pcap");
+			
+			
+			File file = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
 			if (file.exists()) {
-				file = new File(subDir, (new SimpleDateFormat("yyyyMMdd")).format(new Date()) + "-" + token + "-sndr.pcap");
-				try {
-					//Test protocol 1.2b.9
-					FileOutputStream fos = new FileOutputStream(file);
-					fos.write(exchange.getRequestPayload());
-					fos.close();
-					exchange.respond(ResponseCode.VALID);
-					for (TrafikgeneratorServer server : this.server.subservers) {
-						if (server.token.equals(token)) {
-							clientTimeBeforeTest = server.clientTimeBeforeTest;
-							clientTimeAfterTest = server.clientTimeAfterTest;
-							int timeDif = (int) ((clientTimeAfterTest+clientTimeBeforeTest)/2);
-							//Test protocol 1.2b.10
-							if (true || Math.abs(clientTimeAfterTest-clientTimeBeforeTest) > 3) {
+				if(fileType.equals("log")){
+					file = new File(subDir, (time + "-" + token + "-sndr.pcap"));
+					try {
+						//Test protocol 1.3a.9
+						FileOutputStream fos = new FileOutputStream(file);
+						fos.write(exchange.getRequestPayload());
+						fos.close();
+						exchange.respond(ResponseCode.VALID);
+						for (TrafikgeneratorServer server : this.server.subservers) {
+							if (server.token.equals(token)) {
 								
+								//Test protocol 1.3a.10
+									
 								//Sync timestamps with editcap
-								Logger.editLog(file, timeDif);
+								//TODO: take time from meta and send to editLog
+								Logger.editLog(file, 0);
 								
 								//Merge logs with mergecap
 								Logger.mergeLog(file);
@@ -53,16 +56,24 @@ public class FileResource extends ResourceBase {
 								
 								//Open wireshark with merged logs
 								Logger.showLog(file);
+									
 								
 							}
-							else {
-								exchange.respond(ResponseCode.NOT_ACCEPTABLE);
-								System.out.println("The data is probably useless, the time on the client has drifted a lot during the test...");
-							}
 						}
+					} catch (IOException e) {
+						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 					}
-				} catch (IOException e) {
-					exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+				} else if(fileType.equals("meta")) {
+					file = new File(subDir, (time + "-" + token + "-meta.txt"));
+					try {
+						//Test protocol 1.3a.11
+						FileOutputStream fos = new FileOutputStream(file);
+						fos.write(exchange.getRequestPayload());
+						fos.close();
+						exchange.respond(ResponseCode.VALID);
+					} catch (IOException e) {
+						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+					}
 				}
 			}
 			else
