@@ -28,12 +28,12 @@ public class Logger {
 		}
 	}
 	
-	public static void mergeLog(File file){
+	public static void mergeLog(File logFile){
 		Runtime rt = Runtime.getRuntime();
 		try {
-			String x = "\"C:\\Program Files\\Wireshark\\mergecap\" -w " + file.toString().replace("-sndr", "") + " " +
-					file.toString().replace("sndr", "rcvr") + " " +
-					file.toString().replace(".pcap", "_edited.pcap") +"  ";
+			String x = "\"C:\\Program Files\\Wireshark\\mergecap\" -w " + logFile.toString().replace("-sndr", "") + " " +
+					logFile.toString().replace("sndr", "rcvr") + " " +
+					logFile.toString().replace(".pcap", "_edited.pcap") +"  ";
 			tempProc = rt.exec(x);
 			System.out.println(x);
 			
@@ -43,12 +43,12 @@ public class Logger {
 		}
 	}
 	
-	public static void editLog(File file, int timeDif){
+	public static void editLog(File logFile, double d){
 		Runtime rt = Runtime.getRuntime();
 		try {
-			String x ="\"C:\\Program Files\\Wireshark\\editcap\" -t " + Integer.toString(timeDif) + " " + 
-					file.toString() + " " + 
-					file.toString().replace(".pcap", "_edited.pcap") +"  "; 
+			String x ="\"C:\\Program Files\\Wireshark\\editcap\" -t " + Double.toString(d) + " " + 
+					logFile.toString() + " " + 
+					logFile.toString().replace(".pcap", "_edited.pcap") +"  "; 
 			tempProc = rt.exec(x);
 			System.out.println(x);
 			try {

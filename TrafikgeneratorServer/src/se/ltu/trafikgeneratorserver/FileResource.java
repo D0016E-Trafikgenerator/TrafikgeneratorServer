@@ -1,8 +1,12 @@
 package se.ltu.trafikgeneratorserver;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -30,7 +34,7 @@ public class FileResource extends ResourceBase {
 			File subDir = new File(appRoot, "logs");
 			subDir.mkdirs();
 			
-			
+			File metaFile = new File(subDir, (time + "-" + token + "-meta.txt"));
 			File file = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
 			if (file.exists()) {
 				if(fileType.equals("log")){
@@ -44,11 +48,24 @@ public class FileResource extends ResourceBase {
 						for (TrafikgeneratorServer server : this.server.subservers) {
 							if (server.token.equals(token)) {
 								
+						
+								BufferedReader fis = new BufferedReader(new FileReader(metaFile));
+								String z;
+								double offset = 0;
+								
+								while(fis.ready()){
+									z = fis.readLine();
+									if(z.contains("BEFORE_TEST NTP_ERROR="))
+										offset = Long.valueOf(z.split("=")[1]);
+								} 
+	
+								Logger.editLog(file, offset/1000.0);				
+								
 								//Test protocol 1.3a.10
 									
 								//Sync timestamps with editcap
 								//TODO: take time from meta and send to editLog
-								Logger.editLog(file, 0);
+								
 								
 								//Merge logs with mergecap
 								Logger.mergeLog(file);
@@ -64,12 +81,25 @@ public class FileResource extends ResourceBase {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 					}
 				} else if(fileType.equals("meta")) {
-					file = new File(subDir, (time + "-" + token + "-meta.txt"));
+					
+					File logFile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
 					try {
 						//Test protocol 1.3a.11
-						FileOutputStream fos = new FileOutputStream(file);
+						FileOutputStream fos = new FileOutputStream(metaFile);
 						fos.write(exchange.getRequestPayload());
 						fos.close();
+						/*String meta = exchange.getRequestText();
+						int x = meta.lastIndexOf("BEFORE_TEST NTP_ERROR=") ;
+						System.out.println(x);
+						if (x!=-1){
+							System.out.println("dhasjkdhajk");
+							meta = meta.substring(x + 22);
+							meta = meta.split("\n")[0];
+							Logger.editLog(logFile, Integer.valueOf(meta));
+							Logger.mergeLog(logFile);
+						}*/
+
+						
 						exchange.respond(ResponseCode.VALID);
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
