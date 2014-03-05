@@ -4,10 +4,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Logger {
 	static Process proc;
 	static Process tempProc;
+	static Runtime dumpcap;
+	static List<String> cmdList;
 	private static final String TASKLIST = "tasklist";
 	private static final String KILL = "taskkill /IM ";
 	/**
@@ -19,10 +23,21 @@ public class Logger {
 	}
 	
 	public static void startLog(File file){
-		Runtime rt = Runtime.getRuntime();
+		dumpcap = Runtime.getRuntime();
+		cmdList = new ArrayList<String>();
 		try {
-			proc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
+			cmdList = isCmdRunning("cmd.exe");
+				
+			
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		try {
+			proc = dumpcap.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
 					"dumpcap -w " + file.toString() + " -f \"udp port 56830\"\"");
+			//proc =  rt.exec("\"C:\\Program Files\\Wireshark\\dumpcap\" -w " + file.toString() + " -f \"udp port 56830\"\"");
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -68,8 +83,9 @@ public class Logger {
 	public static void showLog(File file){
 		Runtime rt = Runtime.getRuntime();
 		try {
-			tempProc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
-					"&& wireshark -r " + file.toString().replace("-sndr", "") +" \"");
+			/*tempProc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
+					"&& wireshark -r " + file.toString().replace("-sndr", "") +" \""); */
+			tempProc = rt.exec("\"C:\\Program Files\\Wireshark\\wireshark\" -r " + file.toString().replace("-sndr", ""));
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -83,7 +99,7 @@ public class Logger {
 		 //System.out.print(isProcessRunging(processName));
 
 		 try {
-			if (isProcessRunging(processName)) {
+			if (isProcessRunning(processName)) {
 
 			  killProcess(processName);
 			 }
@@ -92,26 +108,60 @@ public class Logger {
 			e.printStackTrace();
 		}
 	}
-	private static boolean isProcessRunging(String serviceName) throws Exception {
+	private static boolean isProcessRunning(String serviceName) throws Exception {
 
-		 Process p = Runtime.getRuntime().exec(TASKLIST);
-		 BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-		 String line;
-		 while ((line = reader.readLine()) != null) {
-
-		  System.out.println(line);
-		  if (line.contains(serviceName)) {
-		   return true;
-		  }
-		 }
-
-		 return false;
-
+		Process p = Runtime.getRuntime().exec(TASKLIST);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+		String line;
+		while ((line = reader.readLine()) != null) {
+		 
+			System.out.println(line);
+			if (line.contains(serviceName)) {
+				return true;
+			}
 		}
 
-	private static void killProcess(String serviceName) throws Exception {
-		System.out.println("PROC KILLED!");
-	  Runtime.getRuntime().exec(KILL + serviceName);
+		return false;
+	
+	}
+	
+	private static List<String> isCmdRunning(String serviceName) throws Exception {
+		List<String> cmdList = new ArrayList<String>();
+		String[] tempList;
+		Process p = Runtime.getRuntime().exec(TASKLIST);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+		String line;
+		while ((line = reader.readLine()) != null) {
+			if (line.contains(serviceName)) {
+				tempList =  line.split("\\s+");
+				cmdList.add(tempList[1]);
+				//cmdList.add(line.split(" ")[1]);
+				System.out.println(line);
+				
+			}
+		}
 
+		return cmdList;
+	
+	}
+
+	private static void killProcess(String serviceName) throws Exception {
+		List<String> newCmdList = new ArrayList<String>();
+		newCmdList = isCmdRunning("cmd.exe");
+		//Runtime.getRuntime().exec(KILL + serviceName);
+		Runtime rt = Runtime.getRuntime();
+		rt.exec("taskkill /f /im " + serviceName);
+		for(int x=0; x<newCmdList.size() ;x++){
+			if(!cmdList.contains(newCmdList.get(x))){
+				rt.exec("taskkill /f /pid " + newCmdList.get(x));
+				System.out.println("CMD WITH PID " + newCmdList.get(x) + " KILLED!");
+			}
+			
+		}
+		//rt.exec("taskkill /f /im cmd.exe");
+
+		System.out.println("PROC KILLED!");
+		System.out.println(newCmdList);
+		System.out.println(cmdList);
 	}
 }
