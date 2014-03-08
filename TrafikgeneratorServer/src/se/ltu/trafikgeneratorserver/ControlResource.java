@@ -1,17 +1,26 @@
 package se.ltu.trafikgeneratorserver;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.Executors;
 
+import se.ltu.trafikgeneratorcoap.send.Sending;
+
+import ch.ethz.inf.vs.californium.coap.Request;
+import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.coap.CoAP.ResponseCode;
+import ch.ethz.inf.vs.californium.network.Endpoint;
 import ch.ethz.inf.vs.californium.network.config.NetworkConfig;
 import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
 import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 
 public class ControlResource extends ResourceBase  {
+	File root = new File(System.getProperty("user.home"));
+	File appRoot = new File(root, "trafikgeneratorcoap");
+	File subDir = new File(appRoot, "logs");
 	private Process proc;
 	private TrafikgeneratorServer server;
 	public ControlResource(String name, TrafikgeneratorServer server) {
@@ -27,9 +36,9 @@ public class ControlResource extends ResourceBase  {
 		String time = query.split("=")[1];
 		//Test protocol 1.3a.4
 		String token = exchange.advanced().getRequest().getTokenString();
-		File root = new File(System.getProperty("user.home"));
-		File appRoot = new File(root, "trafikgeneratorcoap");
-		File subDir = new File(appRoot, "logs");
+		
+		
+		
 		File file = new File(subDir, time + "-" + token + "-rcvr.pcap");
 		file.getParentFile().mkdirs();
 		try {
@@ -77,5 +86,50 @@ public class ControlResource extends ResourceBase  {
 		}
 		else
 			exchange.respond(ResponseCode.BAD_REQUEST);
+	}
+	public void handleGET(CoapExchange exchange) {
+		TrafficConfig config;
+		exchange.accept();
+		String time = exchange.getRequestOptions().getURIQueryString().split("=")[1];
+		String token  = exchange.advanced().getCurrentRequest().getTokenString();
+		
+		File configFile = new File(subDir, (time + "-" + token + "-config.txt"));
+		try{
+			FileOutputStream fos = new FileOutputStream(configFile);
+			fos.write(exchange.getRequestPayload());
+			fos.close();
+		} catch (Exception e){
+			;
+		}
+		
+		//Test protocol 1.3a.4
+		File file = new File(subDir, time + "-" + token + "-sndr.pcap");
+		file.getParentFile().mkdirs();
+		try {
+			if (!file.exists() && file.createNewFile()) {
+				//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
+				config = new TrafficConfig(configFile.toString());
+				config.toNetworkConfig();
+				//TODO: config -> network config
+				
+				Logger.startLog(file);
+				exchange.respond(ResponseCode.CONTINUE);
+				Response response = exchange.advanced().getCurrentRequest().waitForResponse();
+				if (!response.equals(null) && response.getCode().equals(ResponseCode.CREATED)) {
+					//Sending.sendData(config, null);
+					Request delete = Request.newDelete();
+					delete.send(exchange.advanced().getEndpoint());
+					response = delete.waitForResponse();
+					if(!response.equals(null) && response.getCode().equals(ResponseCode.DELETED)){
+						
+					}
+				}
+				
+
+			}
+		} catch (Exception e) {
+			exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+		}
+		
 	}
 }
