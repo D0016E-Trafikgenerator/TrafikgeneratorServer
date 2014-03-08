@@ -35,13 +35,13 @@ public class FileResource extends ResourceBase {
 			subDir.mkdirs();
 			
 			File metaFile = new File(subDir, (time + "-" + token + "-meta.txt"));
-			File file = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
-			if (file.exists()) {
-				if(fileType.equals("log")){
-					file = new File(subDir, (time + "-" + token + "-sndr.pcap"));
+			File rcvrfile = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
+			File sndrfile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
+			if (rcvrfile.exists()) {
+				if(fileType.equals("sndrlog")){
 					try {
 						//Test protocol 1.3a.9
-						FileOutputStream fos = new FileOutputStream(file);
+						FileOutputStream fos = new FileOutputStream(rcvrfile);
 						fos.write(exchange.getRequestPayload());
 						fos.close();
 						exchange.respond(ResponseCode.VALID);
@@ -59,7 +59,7 @@ public class FileResource extends ResourceBase {
 										offset = Long.valueOf(z.split("=")[1]);
 								} 
 	
-								Logger.editLog(file, offset/1000.0);				
+								Logger.editLog(sndrfile, offset/1000.0);				
 								
 								//Test protocol 1.3a.10
 									
@@ -68,11 +68,11 @@ public class FileResource extends ResourceBase {
 								
 								
 								//Merge logs with mergecap
-								Logger.mergeLog(file);
+								Logger.mergeLog(sndrfile);
 								//proc.destroy();
 								
 								//Open wireshark with merged logs
-								Logger.showLog(file);
+								Logger.showLog(sndrfile);
 									
 								
 							}
@@ -80,36 +80,68 @@ public class FileResource extends ResourceBase {
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 					}
+				}else if (fileType.equals("rcvrlog")){
+					rcvrfile = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
+					try {
+						//Test protocol 1.3a.9
+						FileOutputStream fos = new FileOutputStream(rcvrfile);
+						fos.write(exchange.getRequestPayload());
+						fos.close();
+						exchange.respond(ResponseCode.VALID);
+						
+						
+						BufferedReader fis = new BufferedReader(new FileReader(metaFile));
+						String z;
+						double offset = 0;
+						
+						while(fis.ready()){
+							z = fis.readLine();
+							if(z.contains("BEFORE_TEST NTP_ERROR="))
+								offset = Long.valueOf(z.split("=")[1]);
+						} 
+
+						Logger.editLog(rcvrfile, offset/1000.0);				
+						
+						//Test protocol 1.3a.10
+							
+						//Sync timestamps with editcap
+						//TODO: take time from meta and send to editLog
+						
+						
+						//Merge logs with mergecap
+						Logger.mergeLog(rcvrfile);
+						//proc.destroy();
+						
+						//Open wireshark with merged logs
+						Logger.showLog(rcvrfile);
+									
+								
+							
+						
+					} catch (IOException e) {
+						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
+					}
+				}
+					
 				} else if(fileType.equals("meta")) {
 					
-					File logFile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
 					try {
 						//Test protocol 1.3a.11
 						FileOutputStream fos = new FileOutputStream(metaFile);
 						fos.write(exchange.getRequestPayload());
 						fos.close();
-						/*String meta = exchange.getRequestText();
-						int x = meta.lastIndexOf("BEFORE_TEST NTP_ERROR=") ;
-						System.out.println(x);
-						if (x!=-1){
-							System.out.println("dhasjkdhajk");
-							meta = meta.substring(x + 22);
-							meta = meta.split("\n")[0];
-							Logger.editLog(logFile, Integer.valueOf(meta));
-							Logger.mergeLog(logFile);
-						}*/
-
 						
 						exchange.respond(ResponseCode.VALID);
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 					}
-				}
-			}
-			else
+				
+			}else{
 				exchange.respond(ResponseCode.NOT_FOUND);
-		}
-		else
+			}
+		
+		}else{
 			exchange.respond(ResponseCode.BAD_REQUEST);
+		}
 	}
 }

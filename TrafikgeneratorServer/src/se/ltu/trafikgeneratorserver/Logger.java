@@ -34,6 +34,7 @@ public class Logger {
 			e1.printStackTrace();
 		}
 		try {
+			//TODO: make port a variable
 			proc = dumpcap.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
 					"dumpcap -w " + file.toString() + " -f \"udp port 56830\"\"");
 			//proc =  rt.exec("\"C:\\Program Files\\Wireshark\\dumpcap\" -w " + file.toString() + " -f \"udp port 56830\"\"");
@@ -45,12 +46,19 @@ public class Logger {
 	
 	public static void mergeLog(File logFile){
 		Runtime rt = Runtime.getRuntime();
-		try {
-			String x = "\"C:\\Program Files\\Wireshark\\mergecap\" -w " + logFile.toString().replace("-sndr", "") + " " +
+		String merger = "";
+		if(logFile.toString().contains("rcvr")){
+			merger = "\"C:\\Program Files\\Wireshark\\mergecap\" -w " + logFile.toString().replace("-rcvr", "") + " " +
+					logFile.toString().replace("rcvr", "sndr") + " " +
+					logFile.toString().replace(".pcap", "_edited.pcap") +"  ";
+		} else {
+			merger = "\"C:\\Program Files\\Wireshark\\mergecap\" -w " + logFile.toString().replace("-sndr", "") + " " +
 					logFile.toString().replace("sndr", "rcvr") + " " +
 					logFile.toString().replace(".pcap", "_edited.pcap") +"  ";
-			tempProc = rt.exec(x);
-			System.out.println(x);
+		}
+		try { 
+			tempProc = rt.exec(merger);
+			System.out.println(merger);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -85,7 +93,7 @@ public class Logger {
 		try {
 			/*tempProc = rt.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark " +
 					"&& wireshark -r " + file.toString().replace("-sndr", "") +" \""); */
-			tempProc = rt.exec("\"C:\\Program Files\\Wireshark\\wireshark\" -r " + file.toString().replace("-sndr", ""));
+			tempProc = rt.exec("\"C:\\Program Files\\Wireshark\\wireshark\" -r " + file.toString().replace("-sndr", "").replace("-rcvr", ""));
 			
 		} catch (IOException e) {
 			e.printStackTrace();
