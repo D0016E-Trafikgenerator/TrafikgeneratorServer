@@ -60,6 +60,7 @@ public class FileResource extends ResourceBase {
 								} 
 	
 								Logger.editLog(file, offset/1000.0);				
+								fis.close();
 								
 								//Test protocol 1.3a.10
 									
