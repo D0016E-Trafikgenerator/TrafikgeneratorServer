@@ -14,6 +14,7 @@ import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 public class ControlResource extends ResourceBase  {
 	private Process proc;
 	private TrafikgeneratorServer server;
+	private PacketDumper pcapLog;
 	public ControlResource(String name, TrafikgeneratorServer server) {
 		super(name);
 		this.server = server;
@@ -27,17 +28,18 @@ public class ControlResource extends ResourceBase  {
 		String time = query.split("=")[1];
 		//Test protocol 1.3a.4
 		String token = exchange.advanced().getRequest().getTokenString();
+		System.out.println("rq skulle till " + exchange.advanced().getRequest().getDestination());
 		File root = new File(System.getProperty("user.home"));
 		File appRoot = new File(root, "trafikgeneratorcoap");
 		File subDir = new File(appRoot, "logs");
 		File file = new File(subDir, time + "-" + token + "-rcvr.pcap");
 		file.getParentFile().mkdirs();
 		try {
-			if (!file.exists() && file.createNewFile()) {
-				//TODO: remove " && file.createNewFile()" in the line above; it's for the test below -- pcap logging creates a file
-					
-				Logger.startLog(file);
+			if (!file.exists()) {
 				
+				
+				pcapLog = new PacketDumper(file, 56830);
+				new Thread(pcapLog).start();
 				if (file.exists()) {
 					NetworkConfig testConfig = TrafficConfig.stringListToNetworkConfig(options);
 					TrafikgeneratorServer testserver = new TrafikgeneratorServer(testConfig);
@@ -68,7 +70,8 @@ public class ControlResource extends ResourceBase  {
 			for (TrafikgeneratorServer server : this.server.subservers) {
 				if (server.token.equals(token)) {
 					//Test protocol 1.2b.7
-					Logger.exit();
+					//Logger.exit();
+					pcapLog.stop();
 					server.clientTimeAfterTest = clientTimeAfterTest;
 					server.stop();
 					exchange.respond(ResponseCode.DELETED);

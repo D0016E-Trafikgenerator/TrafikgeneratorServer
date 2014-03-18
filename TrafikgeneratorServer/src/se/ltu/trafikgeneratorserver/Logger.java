@@ -4,8 +4,17 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jnetpcap.ByteBufferHandler;
+import org.jnetpcap.Pcap;
+import org.jnetpcap.PcapBpfProgram;
+import org.jnetpcap.PcapDumper;
+import org.jnetpcap.PcapHandler;
+import org.jnetpcap.PcapHeader;
+import org.jnetpcap.PcapIf;
 
 public class Logger {
 	static Process proc;
@@ -22,7 +31,7 @@ public class Logger {
 
 	}
 	
-	public static void startLog(File file){
+	public static void startLog(File file, int port){
 		dumpcap = Runtime.getRuntime();
 		cmdList = new ArrayList<String>();
 		try {
@@ -34,9 +43,7 @@ public class Logger {
 			e1.printStackTrace();
 		}
 		try {
-			proc = dumpcap.exec("cmd /c start cmd.exe /K \"cd \\Program Files\\Wireshark && " +
-					"dumpcap -w " + file.toString() + " -f \"udp port 56830\"\"");
-			//proc =  rt.exec("\"C:\\Program Files\\Wireshark\\dumpcap\" -w " + file.toString() + " -f \"udp port 56830\"\"");
+		    throw new IOException();
 			
 		} catch (IOException e) {
 			e.printStackTrace();

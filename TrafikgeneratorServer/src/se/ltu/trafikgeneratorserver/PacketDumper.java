@@ -1,0 +1,52 @@
+package se.ltu.trafikgeneratorserver;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.net.nntp.NewGroupsOrNewsQuery;
+import org.jnetpcap.ByteBufferHandler;
+import org.jnetpcap.JBufferHandler;
+import org.jnetpcap.Pcap;
+import org.jnetpcap.PcapAddr;
+import org.jnetpcap.PcapBpfProgram;
+import org.jnetpcap.PcapDumper;
+import org.jnetpcap.PcapHeader;
+import org.jnetpcap.PcapIf;
+import org.jnetpcap.nio.JBuffer;
+
+public class PacketDumper implements Runnable {
+	private Pcap packetCapture;
+	private PcapDumper dumper;
+	private JBufferHandler<PcapDumper> dumpHandler;
+	PacketDumper(File file, int port) throws IOException {
+		List<PcapIf> allInterfaces = new ArrayList<PcapIf>();
+		Pcap.findAllDevs(allInterfaces, new StringBuilder());
+		//TODO: Some smarter kind of interface recognition?
+		//PcapIf pcapInterface = PcapIf.findDefaultIf(new StringBuilder());
+		PcapIf pcapInterface = allInterfaces.get(3);
+		System.out.println("if3 lyssnar p " + allInterfaces.get(3).getAddresses().get(0).getAddr().toString());
+		packetCapture = Pcap.openLive(pcapInterface.getName(), 64*1024, Pcap.MODE_PROMISCUOUS, 10000, new StringBuilder());
+		PcapBpfProgram filter = new PcapBpfProgram();
+		packetCapture.compile(filter, "port " + port, 0, 0);
+		packetCapture.setFilter(filter);
+		dumper = packetCapture.dumpOpen(file.toString());
+		dumpHandler = new JBufferHandler<PcapDumper>() {
+			public void nextPacket(PcapHeader header, JBuffer buffer, PcapDumper dumper) {
+				dumper.dump(header, buffer);
+			}
+		};
+	}
+	@Override
+	public void run() {
+		packetCapture.loop(10, dumpHandler, dumper);
+	}
+	void stop() {
+		packetCapture.breakloop();
+	    dumper.close();
+		packetCapture.close();
+	}
+}

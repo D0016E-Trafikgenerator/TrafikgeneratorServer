@@ -59,7 +59,7 @@ public class FileResource extends ResourceBase {
 										offset = Long.valueOf(z.split("=")[1]);
 								} 
 	
-								Logger.editLog(file, offset/1000.0);				
+								//Logger.editLog(file, offset/1000.0);				
 								fis.close();
 								
 								//Test protocol 1.3a.10
@@ -69,11 +69,11 @@ public class FileResource extends ResourceBase {
 								
 								
 								//Merge logs with mergecap
-								Logger.mergeLog(file);
+								//Logger.mergeLog(file);
 								//proc.destroy();
 								
 								//Open wireshark with merged logs
-								Logger.showLog(file);
+								//Logger.showLog(file);
 									
 								
 							}
