@@ -22,8 +22,8 @@ public class TrafikgeneratorServer extends Server {
 		server.setExecutor(Executors.newScheduledThreadPool(4));
 		ControlResource control = new ControlResource("control", server);
 		server.add(control);
-		FileResource file = new FileResource("file", server);
-		server.add(file);
+		FileResource fileResource = new FileResource("file", server);
+		server.add(fileResource);
 		server.start();
 		NTPServer.main(null);
 	}

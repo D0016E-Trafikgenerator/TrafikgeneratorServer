@@ -2,13 +2,9 @@ package se.ltu.trafikgeneratorserver;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.Reader;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import ch.ethz.inf.vs.californium.coap.CoAP.ResponseCode;
 import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
@@ -16,7 +12,6 @@ import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 
 public class FileResource extends ResourceBase {
 	private TrafikgeneratorServer server;
-	private long clientTimeBeforeTest, clientTimeAfterTest;
 	public FileResource(String name, TrafikgeneratorServer server) {
 		super(name);
 		this.server = server;
@@ -24,7 +19,7 @@ public class FileResource extends ResourceBase {
 	public void handlePOST(CoapExchange exchange) {
 		exchange.accept();
 		String query = exchange.getRequestOptions().getURIQueryString();
-		if (query.split("&").length == 3 && query.split("=").length == 4 /*&& query.split("=")[0].equals("token")*/) {
+		if (query.split("&").length == 3 && query.split("=").length == 4) {
 			String[] options = query.split("&");
 			String token = options[1].split("=")[1];
 			String time = options[2].split("=")[1];
@@ -47,60 +42,34 @@ public class FileResource extends ResourceBase {
 						exchange.respond(ResponseCode.VALID);
 						for (TrafikgeneratorServer server : this.server.subservers) {
 							if (server.token.equals(token)) {
-								
-						
 								BufferedReader fis = new BufferedReader(new FileReader(metaFile));
 								String z;
-								double offset = 0;
+								int millisecondsOffset = 0;
 								
 								while(fis.ready()){
 									z = fis.readLine();
 									if(z.contains("BEFORE_TEST NTP_ERROR="))
-										offset = Long.valueOf(z.split("=")[1]);
-								} 
-	
-								//Logger.editLog(file, offset/1000.0);				
+										millisecondsOffset = Integer.valueOf(z.split("=")[1]);
+										//TODO: average of before/after?
+								}
+								int seconds = millisecondsOffset / 1000;
+								int microseconds = (millisecondsOffset - (seconds*1000))*1000;
+								PacketEditor.modifyTimestamps(file, seconds, microseconds);
 								fis.close();
 								
 								//Test protocol 1.3a.10
-									
-								//Sync timestamps with editcap
-								//TODO: take time from meta and send to editLog
-								
-								
 								//Merge logs with mergecap
 								//Logger.mergeLog(file);
-								//proc.destroy();
-								
-								//Open wireshark with merged logs
-								//Logger.showLog(file);
-									
-								
 							}
 						}
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
 					}
 				} else if(fileType.equals("meta")) {
-					
-					File logFile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
 					try {
-						//Test protocol 1.3a.11
 						FileOutputStream fos = new FileOutputStream(metaFile);
 						fos.write(exchange.getRequestPayload());
-						fos.close();
-						/*String meta = exchange.getRequestText();
-						int x = meta.lastIndexOf("BEFORE_TEST NTP_ERROR=") ;
-						System.out.println(x);
-						if (x!=-1){
-							System.out.println("dhasjkdhajk");
-							meta = meta.substring(x + 22);
-							meta = meta.split("\n")[0];
-							Logger.editLog(logFile, Integer.valueOf(meta));
-							Logger.mergeLog(logFile);
-						}*/
-
-						
+						fos.close();						
 						exchange.respond(ResponseCode.VALID);
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);

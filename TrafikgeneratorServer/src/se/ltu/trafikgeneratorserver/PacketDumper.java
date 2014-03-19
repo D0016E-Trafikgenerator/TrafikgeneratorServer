@@ -2,16 +2,11 @@ package se.ltu.trafikgeneratorserver;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.net.nntp.NewGroupsOrNewsQuery;
-import org.jnetpcap.ByteBufferHandler;
 import org.jnetpcap.JBufferHandler;
 import org.jnetpcap.Pcap;
-import org.jnetpcap.PcapAddr;
 import org.jnetpcap.PcapBpfProgram;
 import org.jnetpcap.PcapDumper;
 import org.jnetpcap.PcapHeader;
@@ -42,7 +37,7 @@ public class PacketDumper implements Runnable {
 	}
 	@Override
 	public void run() {
-		packetCapture.loop(10, dumpHandler, dumper);
+		packetCapture.loop(Integer.MAX_VALUE, dumpHandler, dumper);
 	}
 	void stop() {
 		packetCapture.breakloop();

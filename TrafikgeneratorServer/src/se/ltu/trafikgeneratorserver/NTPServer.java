@@ -1,10 +1,9 @@
 package se.ltu.trafikgeneratorserver;
 
 
-import java.net.*;  
-import java.io.*;  
-import java.util.*;  
-import java.lang.*;  
+import java.net.*;
+import java.io.*;
+import java.util.*;
   
 public class NTPServer {  
       
