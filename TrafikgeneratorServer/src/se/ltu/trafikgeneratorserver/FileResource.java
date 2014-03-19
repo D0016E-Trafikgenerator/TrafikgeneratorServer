@@ -30,13 +30,22 @@ public class FileResource extends ResourceBase {
 			subDir.mkdirs();
 			
 			File metaFile = new File(subDir, (time + "-" + token + "-meta.txt"));
-			File file = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
-			if (file.exists()) {
+			File rcvrFile = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
+			File sndrFile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
+			if (rcvrFile.exists() || sndrFile.exists()) {
 				if(fileType.equals("log")){
-					file = new File(subDir, (time + "-" + token + "-sndr.pcap"));
+					File localFile = null, remoteFile = null;
+					if (rcvrFile.exists() && !sndrFile.exists()) {
+						localFile = rcvrFile;
+						remoteFile = sndrFile;
+					}
+					else if (sndrFile.exists() && !rcvrFile.exists()) {
+						localFile = sndrFile;
+						remoteFile = rcvrFile;
+					}
 					try {
 						//Test protocol 1.3a.9
-						FileOutputStream fos = new FileOutputStream(file);
+						FileOutputStream fos = new FileOutputStream(remoteFile);
 						fos.write(exchange.getRequestPayload());
 						fos.close();
 						exchange.respond(ResponseCode.VALID);
@@ -54,7 +63,7 @@ public class FileResource extends ResourceBase {
 								}
 								int seconds = millisecondsOffset / 1000;
 								int microseconds = (millisecondsOffset - (seconds*1000))*1000;
-								PacketEditor.modifyTimestamps(file, seconds, microseconds);
+								PacketEditor.modifyTimestamps(remoteFile, seconds, microseconds);
 								fis.close();
 								
 								//Test protocol 1.3a.10

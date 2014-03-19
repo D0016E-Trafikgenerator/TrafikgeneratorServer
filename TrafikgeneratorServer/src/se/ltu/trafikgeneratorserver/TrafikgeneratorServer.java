@@ -15,9 +15,6 @@ public class TrafikgeneratorServer extends Server {
 	}
 	public static void main(String[] args) {
 		//Test protocol 1.2b.1
-		//TODO: code to start NTP server
-		//Currently NTP server is started separately 
-		
 		TrafikgeneratorServer server = new TrafikgeneratorServer(NetworkConfig.createStandardWithoutFile());
 		server.setExecutor(Executors.newScheduledThreadPool(4));
 		ControlResource control = new ControlResource("control", server);
