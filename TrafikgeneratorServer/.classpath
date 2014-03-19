@@ -3,7 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/californium"/>
-	<classpathentry kind="lib" path="lib/commons-net-3.3.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Sceleris/Downloads/jnetpcap-1.4.r1425/jnetpcap.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/TrafikgeneratorCoAP"/>
 	<classpathentry kind="output" path="bin"/>
