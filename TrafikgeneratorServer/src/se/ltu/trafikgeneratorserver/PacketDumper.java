@@ -20,10 +20,15 @@ public class PacketDumper implements Runnable {
 	PacketDumper(File file, int port) throws IOException {
 		List<PcapIf> allInterfaces = new ArrayList<PcapIf>();
 		Pcap.findAllDevs(allInterfaces, new StringBuilder());
-		//TODO: Some smarter kind of interface recognition?
-		//PcapIf pcapInterface = PcapIf.findDefaultIf(new StringBuilder());
-		PcapIf pcapInterface = allInterfaces.get(3);
-		System.out.println("if3 lyssnar p " + allInterfaces.get(3).getAddresses().get(0).getAddr().toString());
+		/*
+		 * TODO: Some smarter kind of interface recognition?
+		 * For example, "use the interface with the same IP as in the received packet".
+		 * 
+		 * If the default interface doesn't work, i.e. no packets are dumped,
+		 * the interface in question may have to be explicitly specified.
+		 */
+		PcapIf pcapInterface = PcapIf.findDefaultIf(new StringBuilder());
+		//PcapIf pcapInterface = allInterfaces.get(3);
 		packetCapture = Pcap.openLive(pcapInterface.getName(), 64*1024, Pcap.MODE_PROMISCUOUS, 10000, new StringBuilder());
 		PcapBpfProgram filter = new PcapBpfProgram();
 		packetCapture.compile(filter, "port " + port, 0, 0);

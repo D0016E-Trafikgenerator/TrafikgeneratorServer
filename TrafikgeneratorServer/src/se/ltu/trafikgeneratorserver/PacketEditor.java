@@ -7,6 +7,9 @@ import org.jnetpcap.PcapDumper;
 import org.jnetpcap.packet.PcapPacket;
 
 public class PacketEditor {
+	/*
+	 * A class for editing Pcap log files.
+	 */
 	public static void modifyTimestamps(File pcapFile, int seconds, int microseconds) {
 		File editedPcapFile = new File(pcapFile.toString().replace(".pcap", "_edited.pcap"));
 		Pcap packetCaptureIn = Pcap.openOffline(pcapFile.toString(), new StringBuilder());

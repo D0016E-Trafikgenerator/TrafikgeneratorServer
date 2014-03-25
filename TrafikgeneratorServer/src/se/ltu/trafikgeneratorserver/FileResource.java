@@ -11,6 +11,21 @@ import ch.ethz.inf.vs.californium.server.resources.CoapExchange;
 import ch.ethz.inf.vs.californium.server.resources.ResourceBase;
 
 public class FileResource extends ResourceBase {
+	/*
+	 * The file resource is meant to handle requests on
+	 * coap://server/file and we expect only one kind of request:
+	 * * POST, when a client asks the server to store some kind of log
+	 *         file. The server only stores the payload as a file if
+	 *         if the query is formulated in the right way. And we
+	 *         only accept a Pcap log for which we already have our
+	 *         own capture. (I.e. save rcvr only if sndr exists.)
+	 *         
+	 *         The sending of a Pcap log is assumed to have been
+	 *         preceded by the sending (and saving) of a meta log.
+	 *         The time disparity denoted by the NTP information in
+	 *         the meta file is used to adjust timestamps
+	 *         in the Pcap log file.
+	 */
 	private TrafikgeneratorServer server;
 	public FileResource(String name, TrafikgeneratorServer server) {
 		super(name);
@@ -28,7 +43,6 @@ public class FileResource extends ResourceBase {
 			File appRoot = new File(root, "trafikgeneratorcoap");
 			File subDir = new File(appRoot, "logs");
 			subDir.mkdirs();
-			
 			File metaFile = new File(subDir, (time + "-" + token + "-meta.txt"));
 			File rcvrFile = new File(subDir, (time + "-" + token + "-rcvr.pcap"));
 			File sndrFile = new File(subDir, (time + "-" + token + "-sndr.pcap"));
@@ -44,31 +58,28 @@ public class FileResource extends ResourceBase {
 						remoteFile = rcvrFile;
 					}
 					try {
-						//Test protocol 1.3a.9
 						FileOutputStream fos = new FileOutputStream(remoteFile);
 						fos.write(exchange.getRequestPayload());
 						fos.close();
 						exchange.respond(ResponseCode.VALID);
 						for (TrafikgeneratorServer server : this.server.subservers) {
 							if (server.token.equals(token)) {
-								BufferedReader fis = new BufferedReader(new FileReader(metaFile));
-								String z;
+								BufferedReader metadataReader = new BufferedReader(new FileReader(metaFile));
+								String metadata;
 								int millisecondsOffset = 0;
-								
-								while(fis.ready()){
-									z = fis.readLine();
-									if(z.contains("BEFORE_TEST NTP_ERROR="))
-										millisecondsOffset = Integer.valueOf(z.split("=")[1]);
-										//TODO: average of before/after?
+								while(metadataReader.ready()){
+									metadata = metadataReader.readLine();
+									if(metadata.contains("BEFORE_TEST NTP_ERROR="))
+										millisecondsOffset = Integer.valueOf(metadata.split("=")[1]);
+										//TODO: average of before/after? Just check that values are sane.
+										//There were times when AFTER_TEST NTP_ERROR was wildly inaccurate.
 								}
 								int seconds = millisecondsOffset / 1000;
 								int microseconds = (millisecondsOffset - (seconds*1000))*1000;
 								PacketEditor.modifyTimestamps(remoteFile, seconds, microseconds);
-								fis.close();
-								
-								//Test protocol 1.3a.10
-								//Merge logs with mergecap
-								//Logger.mergeLog(file);
+								metadataReader.close();
+								//TODO: Implement log merging through JNetPcap.
+								//In the meanwhile, use, for example, the merging function in Wireshark.
 							}
 						}
 					} catch (IOException e) {
@@ -76,9 +87,9 @@ public class FileResource extends ResourceBase {
 					}
 				} else if(fileType.equals("meta")) {
 					try {
-						FileOutputStream fos = new FileOutputStream(metaFile);
-						fos.write(exchange.getRequestPayload());
-						fos.close();						
+						FileOutputStream metadataWriter = new FileOutputStream(metaFile);
+						metadataWriter.write(exchange.getRequestPayload());
+						metadataWriter.close();						
 						exchange.respond(ResponseCode.VALID);
 					} catch (IOException e) {
 						exchange.respond(ResponseCode.INTERNAL_SERVER_ERROR);
